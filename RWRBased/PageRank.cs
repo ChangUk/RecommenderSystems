@@ -11,19 +11,19 @@ namespace RWRBased {
         public long id;
         public NodeType type;
         public double rank;
-        public double nextRank;
+        public double newRank;
         public Dictionary<Node, double> forwardLinks;
 
         public Node(long id, NodeType type, double rank, Dictionary<Node, double> forwardLinks) {
             this.id = id;
             this.type = type;
             this.rank = rank;
-            this.nextRank = 0d;
+            this.newRank = 0d;
             this.forwardLinks = forwardLinks;
         }
 
         public void AddRank(double value) {
-            nextRank += value;
+            newRank += value;
         }
 
         public void deliverRank(Dictionary<Node, double> restart, float dampingFactor) {
@@ -48,7 +48,11 @@ namespace RWRBased {
                     node.AddRank(rank_restart * weight);
                 }
             }
-            rank = nextRank;
+        }
+
+        public void updateRank() {
+            rank = newRank;
+            newRank = 0d;
         }
     }
 
@@ -74,16 +78,23 @@ namespace RWRBased {
 
         // Run PageRank algorithm until convergence
         public void run(double threshold) {
-            while (!isConverged(threshold))
-                foreach (KeyValuePair<Node, double> entry in nodes) {
-                    Node node = entry.Key;
+            while (true) {
+                foreach (Node node in nodes.Keys)
                     node.deliverRank(nodes, dampingFactor);
+                if (isConverged(threshold)) {
+                    foreach (Node node in nodes.Keys)
+                        node.updateRank();
+                    break;
+                } else {
+                    foreach (Node node in nodes.Keys)
+                        node.updateRank();
                 }
+            }
         }
 
         // Check if the amount of each node's rank variation is less than threshold
         private bool isConverged(double threshold) {
-            double diffs = nodes.Sum(node => Math.Abs(node.Key.nextRank - node.Key.rank));
+            double diffs = nodes.Sum(node => Math.Abs(node.Key.newRank - node.Key.rank));
             return diffs < threshold ? true : false;
         }
     }
