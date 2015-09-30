@@ -5,14 +5,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RWRBased {
-    public enum NodeType { USER, ITEM }
-
+namespace Recommender.RWRBased {
     public class Recommender {
         private Dictionary<string, Node> nodes;
 
         public Recommender() {
             this.nodes = new Dictionary<string, Node>();
+        }
+
+        public Recommender(Dictionary<string, Node> nodes) {
+            this.nodes = nodes;
         }
 
         public void loadData(string filePath) {
@@ -42,15 +44,9 @@ namespace RWRBased {
         }
 
         public List<KeyValuePair<string, double>> Recommendation(string targetUserId) {
-            // Give rank score to all nodes
-            foreach (KeyValuePair<string, Node> entry in nodes)
-                entry.Value.rank = 1.0d / nodes.Count;
-
             // Run Personalized PageRank algorithm
-            Node targetUser = nodes[targetUserId];
-            PageRank pagerank = new PageRank(nodes.Values.ToList(), 0.15f, targetUser);
-            double threshold = (1 / double.MaxValue) * nodes.Count;
-            pagerank.run(threshold);
+            PageRank pagerank = new PageRank(nodes.Values.ToList(), 0.15f, nodes[targetUserId]);
+            pagerank.run();
 
             // Sort by rank
             List<KeyValuePair<string, Node>> nodeList = nodes.ToList();

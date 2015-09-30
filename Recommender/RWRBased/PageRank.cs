@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RWRBased {
+namespace Recommender.RWRBased {
     public class Node {
         public string id;
         public NodeType type;
@@ -62,45 +62,60 @@ namespace RWRBased {
         }
     }
 
-    class PageRank {
+    public class PageRank {
         // Node and its weight(0-1) for restart
-        private Dictionary<Node, double> nodes;
+        private Dictionary<Node, double> restart = new Dictionary<Node, double>();
         private float dampingFactor;
 
         public PageRank(List<Node> nodes, float dampingFactor) {
-            this.nodes = new Dictionary<Node, double>();
             this.dampingFactor = dampingFactor;
-            foreach (Node node in nodes) 
-                this.nodes.Add(node, 1d / nodes.Count);
+            foreach (Node node in nodes) {
+                // Give initial and identical ranks to all nodes
+                node.rank = 1d / nodes.Count;
+
+                // Give a probability for random jump (restart)
+                restart[node] = 1d / nodes.Count;
+            }
         }
 
         // Personalized PageRank
         public PageRank(List<Node> nodes, float dampingFactor, Node target) {
-            this.nodes = new Dictionary<Node, double>();
             this.dampingFactor = dampingFactor;
-            foreach (Node node in nodes)
-                this.nodes.Add(node, (node == target ? 1d : 0d));
+            foreach (Node node in nodes) {
+                // Give initial and identical ranks to all nodes
+                node.rank = 1d / nodes.Count;
+
+                // The probability for random jump exists only on the target node
+                restart[node] = (node == target) ? 1d : 0d;
+            }
         }
 
         // Run PageRank algorithm until convergence
+        public void run() {
+            double threshold = (1 / double.MaxValue) * restart.Count;
+            run(threshold);
+        }
+
         public void run(double threshold) {
             while (true) {
-                foreach (Node node in nodes.Keys)
-                    node.deliverRank(nodes, dampingFactor);
+                foreach (Node node in restart.Keys)
+                    node.deliverRank(restart, dampingFactor);
                 if (isConverged(threshold)) {
-                    foreach (Node node in nodes.Keys)
+                    // Update ranks
+                    foreach (Node node in restart.Keys)
                         node.updateRank();
                     break;
                 } else {
-                    foreach (Node node in nodes.Keys)
+                    // Update ranks
+                    foreach (Node node in restart.Keys)
                         node.updateRank();
                 }
             }
         }
 
-        // Check if the amount of each node's rank variation is less than threshold
+        // Check if the total amount of each node's rank variation is less than threshold (at the next step)
         private bool isConverged(double threshold) {
-            double diffs = nodes.Sum(node => Math.Abs(node.Key.newRank - node.Key.rank));
+            double diffs = restart.Sum(node => Math.Abs(node.Key.newRank - node.Key.rank));
             return diffs < threshold ? true : false;
         }
     }

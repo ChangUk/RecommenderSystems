@@ -5,11 +5,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("RWRBased")]
+[assembly: AssemblyTitle("CrossValidation")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("RWRBased")]
+[assembly: AssemblyProduct("CrossValidation")]
 [assembly: AssemblyCopyright("Copyright ©  2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -20,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("6e680c4f-b09f-4465-bcd0-7fa454f692d3")]
+[assembly: Guid("9de05c8a-161d-4db6-a2ce-6ef52441a327")]
 
 // Version information for an assembly consists of the following four values:
 //
