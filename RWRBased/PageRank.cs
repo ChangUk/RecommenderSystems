@@ -5,20 +5,26 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace RWRBased {
-    public enum NodeType { User, Tweet }
-
     public class Node {
-        public long id;
+        public string id;
         public NodeType type;
         public double rank;
         public double newRank;
         public Dictionary<Node, double> forwardLinks;
 
-        public Node(long id, NodeType type, double rank, Dictionary<Node, double> forwardLinks) {
+        public Node(string id, NodeType type)
+            : this(id, type, 0, new Dictionary<Node, double>()) {
+        }
+
+        public Node(string id, NodeType type, double initRank)
+            : this(id, type, initRank, new Dictionary<Node, double>()) {
+        }
+
+        public Node(string id, NodeType type, double initRank, Dictionary<Node, double> forwardLinks) {
             this.id = id;
             this.type = type;
-            this.rank = rank;
-            this.newRank = 0d;
+            this.rank = initRank;
+            this.newRank = 0;
             this.forwardLinks = forwardLinks;
         }
 

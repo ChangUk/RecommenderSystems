@@ -9,12 +9,12 @@ namespace RWRBased {
         static void Main(string[] args) {
             Console.WriteLine("The PageRank algorithm starts!");
 
-            List<Node> nodes = new List<Node>();
-            double threshold = 0.0001d;
-            // TODO: add node into list & set threshold for convergence
-
-            PageRank pagerank = new PageRank(nodes, 0.15f);
-            pagerank.run(threshold);
+            Recommender recsys = new Recommender();
+            recsys.loadData("C:\\Users\\changuk\\Desktop\\train.dat");
+            string targetUserId = "9465097";
+            List<KeyValuePair<string, double>> recommendation = recsys.Recommendation(targetUserId);
+            foreach (KeyValuePair<string, double> entry in recommendation)
+                Console.WriteLine(entry.Value + "\t" + entry.Key);
 
             Console.WriteLine("Finished!");
         }
