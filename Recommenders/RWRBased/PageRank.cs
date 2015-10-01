@@ -4,28 +4,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Recommender.RWRBased {
+namespace Recommenders.RWRBased {
     public class Node {
-        public string id;
+        public long id;
         public NodeType type;
         public double rank;
         public double newRank;
         public Dictionary<Node, double> forwardLinks;
 
-        public Node(string id, NodeType type)
-            : this(id, type, 0, new Dictionary<Node, double>()) {
-        }
-
-        public Node(string id, NodeType type, double initRank)
-            : this(id, type, initRank, new Dictionary<Node, double>()) {
-        }
-
-        public Node(string id, NodeType type, double initRank, Dictionary<Node, double> forwardLinks) {
+        public Node(long id, NodeType type) {
             this.id = id;
             this.type = type;
-            this.rank = initRank;
+            this.rank = 0;
             this.newRank = 0;
-            this.forwardLinks = forwardLinks;
+            this.forwardLinks = null;
         }
 
         public void AddRank(double value) {
@@ -33,7 +25,7 @@ namespace Recommender.RWRBased {
         }
 
         public void deliverRank(Dictionary<Node, double> restart, float dampingFactor) {
-            if (forwardLinks.Count == 0) {
+            if (forwardLinks == null || forwardLinks.Count == 0) {
                 // Dangling node
                 foreach (KeyValuePair<Node, double> entry in restart) {
                     Node node = entry.Key;
@@ -44,7 +36,7 @@ namespace Recommender.RWRBased {
                 double rank_randomWalk = (1 - dampingFactor) * rank;
                 foreach (KeyValuePair<Node, double> entry in forwardLinks) {
                     Node node = entry.Key;
-                    double weight = entry.Value;
+                    double weight = (entry.Value == 0) ? (1d / forwardLinks.Count) : entry.Value;
                     node.AddRank(rank_randomWalk * weight);
                 }
                 double rank_restart = rank - rank_randomWalk;
@@ -73,7 +65,7 @@ namespace Recommender.RWRBased {
                 // Give initial and identical ranks to all nodes
                 node.rank = 1d / nodes.Count;
 
-                // Give a probability for random jump (restart)
+                // Make restart vector: all the probabilities of random jump are equal for every nodes.
                 restart[node] = 1d / nodes.Count;
             }
         }
@@ -85,7 +77,7 @@ namespace Recommender.RWRBased {
                 // Give initial and identical ranks to all nodes
                 node.rank = 1d / nodes.Count;
 
-                // The probability for random jump exists only on the target node
+                // Make restart vector: the probability of random jump exists only on the target node.
                 restart[node] = (node == target) ? 1d : 0d;
             }
         }
