@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Recommenders.RWRBased {
     public class Node {
@@ -54,12 +52,13 @@ namespace Recommenders.RWRBased {
         }
     }
 
-    public class PageRank {
+    public class RandomWalkRestart {
         // Node and its weight(0-1) for restart
         private Dictionary<Node, double> restart = new Dictionary<Node, double>();
         private float dampingFactor;
 
-        public PageRank(List<Node> nodes, float dampingFactor) {
+        // Standard Random Walk with Restart
+        public RandomWalkRestart(List<Node> nodes, float dampingFactor) {
             this.dampingFactor = dampingFactor;
             foreach (Node node in nodes) {
                 // Give initial and identical ranks to all nodes
@@ -70,8 +69,8 @@ namespace Recommenders.RWRBased {
             }
         }
 
-        // Personalized PageRank
-        public PageRank(List<Node> nodes, float dampingFactor, Node target) {
+        // Personalized Random Walk with Restart
+        public RandomWalkRestart(List<Node> nodes, float dampingFactor, Node target) {
             this.dampingFactor = dampingFactor;
             foreach (Node node in nodes) {
                 // Give initial and identical ranks to all nodes
@@ -82,14 +81,16 @@ namespace Recommenders.RWRBased {
             }
         }
 
-        // Run PageRank algorithm until convergence
+        // Run the algorithm until convergence
         public void run() {
             double threshold = (1 / double.MaxValue) * restart.Count;
             run(threshold);
         }
 
         public void run(double threshold) {
+            int i = 0;
             while (true) {
+                Console.WriteLine(i++);
                 foreach (Node node in restart.Keys)
                     node.deliverRank(restart, dampingFactor);
                 if (isConverged(threshold)) {
@@ -102,6 +103,17 @@ namespace Recommenders.RWRBased {
                     foreach (Node node in restart.Keys)
                         node.updateRank();
                 }
+            }
+        }
+
+        // Run iterative algorithm as many as the given number
+        public void run(int nIterations) {
+            for (int i = 0; i < nIterations; i++) {
+                Console.WriteLine(i);
+                foreach (Node node in restart.Keys)
+                    node.deliverRank(restart, dampingFactor);
+                foreach (Node node in restart.Keys)
+                    node.updateRank();
             }
         }
 

@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Recommenders.RWRBased {
     public enum NodeType { USER, ITEM }
@@ -11,11 +7,6 @@ namespace Recommenders.RWRBased {
     public class Recommender {
         private Dictionary<long, Node> userNodes;
         private Dictionary<long, Node> itemNodes;
-
-        public Recommender() {
-            this.userNodes = new Dictionary<long, Node>();
-            this.itemNodes = new Dictionary<long, Node>();
-        }
 
         public Recommender(Dictionary<long, Node> userNodes, Dictionary<long, Node> itemNodes) {
             this.userNodes = userNodes;
@@ -45,15 +36,15 @@ namespace Recommenders.RWRBased {
             return candidateItems;
         }
 
-        public List<Node> Recommendation(long targetUserId, float dampingFactor) {
+        public List<Node> Recommendation(long targetUserId, float dampingFactor, int nIterations) {
             List<Node> userNodeList = userNodes.Values.ToList();
             List<Node> itemNodeList = itemNodes.Values.ToList();
             List<Node> allNodes = userNodeList.Concat(itemNodeList).ToList();
 
-            // Run Personalized PageRank algorithm
+            // Run Personalized Random Walk with Restart algorithm
             Node targetNode = userNodes[targetUserId];
-            PageRank pagerank = new PageRank(allNodes, dampingFactor, targetNode);
-            pagerank.run();
+            RandomWalkRestart rwr = new RandomWalkRestart(allNodes, dampingFactor, targetNode);
+            rwr.run(nIterations);
 
             // Make recommendation by sorting candidate item list by rank
             List<Node> candidateItems = getCandidateItems(targetUserId);
