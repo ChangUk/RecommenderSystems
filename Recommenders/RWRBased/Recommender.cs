@@ -3,6 +3,7 @@ using System.Linq;
 
 namespace Recommenders.RWRBased {
     public enum NodeType { USER, ITEM }
+    public enum EdgeType { LIKE, FRIENDSHIP, COMMUNICATION, ATHORSHIP, PURCHASE, ETC }
 
     public class Recommender {
         private Dictionary<long, Node> userNodes;

@@ -41,6 +41,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RWRBased\Graph.cs" />
+    <Compile Include="RWRBased\Model.cs" />
     <Compile Include="RWRBased\RandomWalkRestart.cs" />
     <Compile Include="RWRBased\Recommender.cs" />
   </ItemGroup>
