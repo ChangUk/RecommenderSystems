@@ -14,7 +14,8 @@ namespace TweetRecommender {
         private SQLiteAdapter dbAdapter;
 
         // Graph information
-        private int idxNode;
+        private int nNodes;
+        private int nLinks;
         public Dictionary<int, Node> allNodes;
         public Dictionary<int, List<ForwardLink>> allLinks;
 
@@ -23,28 +24,28 @@ namespace TweetRecommender {
         public Dictionary<long, int> memberIDs;      // Users who are linked with friendship only
         public Dictionary<long, int> tweetIDs;
         
-        public DataLoader(string dbPath, long egoUserId) {
-            this.egoUserId = egoUserId;
+        public DataLoader(string dbPath) {
+            this.egoUserId = long.Parse(Path.GetFileNameWithoutExtension(dbPath));
             this.dbAdapter = new SQLiteAdapter(dbPath);
         }
 
         public void addUserNode(long id, NodeType type) {
             if (!userIDs.ContainsKey(id)) {
                 Node node = new Node(id, type);
-                allNodes.Add(idxNode, node);
-                userIDs.Add(id, idxNode);
+                allNodes.Add(nNodes, node);
+                userIDs.Add(id, nNodes);
                 if (type == NodeType.USER)
-                    memberIDs.Add(id, idxNode);
-                idxNode += 1;
+                    memberIDs.Add(id, nNodes);
+                nNodes += 1;
             }
         }
 
         public void addTweetNode(long id, NodeType type) {
             if (!tweetIDs.ContainsKey(id)) {
                 Node node = new Node(id, type);
-                allNodes.Add(idxNode, node);
-                tweetIDs.Add(id, idxNode);
-                idxNode += 1;
+                allNodes.Add(nNodes, node);
+                tweetIDs.Add(id, nNodes);
+                nNodes += 1;
             }
         }
 
@@ -52,8 +53,10 @@ namespace TweetRecommender {
             if (!allLinks.ContainsKey(idxSourceNode))
                 allLinks.Add(idxSourceNode, new List<ForwardLink>());
             ForwardLink link = new ForwardLink(idxTargetNode, type, weight);
-            if (!allLinks[idxSourceNode].Contains(link))
+            if (!allLinks[idxSourceNode].Contains(link)) {
                 allLinks[idxSourceNode].Add(link);
+                nLinks += 1;
+            }
         }
 
         /// <summary>
@@ -61,8 +64,11 @@ namespace TweetRecommender {
         /// <para>No user friendship</para>
         /// </summary>
         public void graphConfiguration_baseline() {
+            Console.WriteLine("Graph(" + egoUserId + " - baseline) Configuration...");
+
             // Initialize graph information
-            idxNode = 0;
+            nNodes = 0;
+            nLinks = 0;
             allNodes = new Dictionary<int, Node>();
             allLinks = new Dictionary<int, List<ForwardLink>>();
             userIDs = new Dictionary<long, int>();
@@ -92,8 +98,6 @@ namespace TweetRecommender {
                 foreach (long retweet in retweets) {
                     addTweetNode(retweet, NodeType.ITEM);
                     int idxTweet = tweetIDs[retweet];
-
-                    // Add link
                     addLink(idxMember, idxTweet, EdgeType.LIKE, 1);
                     addLink(idxTweet, idxMember, EdgeType.LIKE, 1);
                 }
@@ -103,8 +107,6 @@ namespace TweetRecommender {
                 foreach (long quote in quotes) {
                     addTweetNode(quote, NodeType.ITEM);
                     int idxTweet = tweetIDs[quote];
-
-                    // Add link
                     addLink(idxMember, idxTweet, EdgeType.LIKE, 1);
                     addLink(idxTweet, idxMember, EdgeType.LIKE, 1);
                 }
@@ -114,20 +116,16 @@ namespace TweetRecommender {
                 foreach (long favorite in favorites) {
                     addTweetNode(favorite, NodeType.ITEM);
                     int idxTweet = tweetIDs[favorite];
-
-                    // Add link
                     addLink(idxMember, idxTweet, EdgeType.LIKE, 1);
                     addLink(idxTweet, idxMember, EdgeType.LIKE, 1);
                 }
             }
 
-            Console.WriteLine("# of usernodes: " + userIDs.Count);
-            Console.WriteLine("# of tweetnodes: " + tweetIDs.Count);
-            Console.WriteLine("# of nodes: " + allNodes.Count);
-            int cnt = 0;
-            foreach (List<ForwardLink> links in allLinks.Values)
-                cnt += links.Count;
-            Console.WriteLine("# of links: " + cnt);
+            // Print out the graph information
+            Console.WriteLine("# of nodes: " + nNodes);
+            Console.WriteLine("\t* User: " + userIDs.Count);
+            Console.WriteLine("\t* Tweet: " + tweetIDs.Count);
+            Console.WriteLine("# of links: " + nLinks);
         }
 
         /// <summary>
@@ -136,7 +134,8 @@ namespace TweetRecommender {
         /// </summary>
         public void graphConfiguration_proposed1() {
             // Initialize graph information
-            idxNode = 0;
+            nNodes = 0;
+            nLinks = 0;
             allNodes = new Dictionary<int, Node>();
             allLinks = new Dictionary<int, List<ForwardLink>>();
             userIDs = new Dictionary<long, int>();
@@ -163,7 +162,8 @@ namespace TweetRecommender {
         /// </summary>
         public void graphConfiguration_proposed2() {
             // Initialize graph information
-            idxNode = 0;
+            nNodes = 0;
+            nLinks = 0;
             allNodes = new Dictionary<int, Node>();
             allLinks = new Dictionary<int, List<ForwardLink>>();
             userIDs = new Dictionary<long, int>();

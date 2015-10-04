@@ -52,7 +52,7 @@ namespace Recommenders.RWRBased {
         public void run(int nIterations) {
             for (int n = 0; n < nIterations; n++) {
                 // Print out the number of iterations so far
-                Console.WriteLine(n);
+                Console.WriteLine("Iteration: " + (n + 1));
                 
                 // Deliever and update ranks
                 deliverRanks();
