@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace Recommenders.RWRBased {
-    public class Node {
+    public class NodeInfo {
         public long id;
         public NodeType type;
         public double rank;
         public double newRank;
-        public Dictionary<Node, double> forwardLinks;
+        public Dictionary<NodeInfo, double> forwardLinks;
 
-        public Node(long id, NodeType type) {
+        public NodeInfo(long id, NodeType type) {
             this.id = id;
             this.type = type;
             this.rank = 0;
@@ -22,24 +22,24 @@ namespace Recommenders.RWRBased {
             newRank += value;
         }
 
-        public void deliverRank(Dictionary<Node, double> restart, float dampingFactor) {
+        public void deliverRank(Dictionary<NodeInfo, double> restart, float dampingFactor) {
             if (forwardLinks == null || forwardLinks.Count == 0) {
                 // Dangling node
-                foreach (KeyValuePair<Node, double> entry in restart) {
-                    Node node = entry.Key;
+                foreach (KeyValuePair<NodeInfo, double> entry in restart) {
+                    NodeInfo node = entry.Key;
                     double weight = entry.Value;
                     node.AddRank(rank * weight);
                 }
             } else {
                 double rank_randomWalk = (1 - dampingFactor) * rank;
-                foreach (KeyValuePair<Node, double> entry in forwardLinks) {
-                    Node node = entry.Key;
+                foreach (KeyValuePair<NodeInfo, double> entry in forwardLinks) {
+                    NodeInfo node = entry.Key;
                     double weight = (entry.Value == 0) ? (1d / forwardLinks.Count) : entry.Value;
                     node.AddRank(rank_randomWalk * weight);
                 }
                 double rank_restart = rank - rank_randomWalk;
-                foreach (KeyValuePair<Node, double> entry in restart) {
-                    Node node = entry.Key;
+                foreach (KeyValuePair<NodeInfo, double> entry in restart) {
+                    NodeInfo node = entry.Key;
                     double weight = entry.Value;
                     node.AddRank(rank_restart * weight);
                 }
@@ -54,13 +54,13 @@ namespace Recommenders.RWRBased {
 
     public class RandomWalkRestart {
         // Node and its weight(0-1) for restart
-        private Dictionary<Node, double> restart = new Dictionary<Node, double>();
+        private Dictionary<NodeInfo, double> restart = new Dictionary<NodeInfo, double>();
         private float dampingFactor;
 
         // Standard Random Walk with Restart
-        public RandomWalkRestart(List<Node> nodes, float dampingFactor) {
+        public RandomWalkRestart(List<NodeInfo> nodes, float dampingFactor) {
             this.dampingFactor = dampingFactor;
-            foreach (Node node in nodes) {
+            foreach (NodeInfo node in nodes) {
                 // Give initial and identical ranks to all nodes
                 node.rank = 1d / nodes.Count;
 
@@ -70,9 +70,9 @@ namespace Recommenders.RWRBased {
         }
 
         // Personalized Random Walk with Restart
-        public RandomWalkRestart(List<Node> nodes, float dampingFactor, Node target) {
+        public RandomWalkRestart(List<NodeInfo> nodes, float dampingFactor, NodeInfo target) {
             this.dampingFactor = dampingFactor;
-            foreach (Node node in nodes) {
+            foreach (NodeInfo node in nodes) {
                 // Give initial and identical ranks to all nodes
                 node.rank = 1d / nodes.Count;
 
@@ -91,16 +91,16 @@ namespace Recommenders.RWRBased {
             int i = 0;
             while (true) {
                 Console.WriteLine(i++);
-                foreach (Node node in restart.Keys)
+                foreach (NodeInfo node in restart.Keys)
                     node.deliverRank(restart, dampingFactor);
                 if (isConverged(threshold)) {
                     // Update ranks
-                    foreach (Node node in restart.Keys)
+                    foreach (NodeInfo node in restart.Keys)
                         node.updateRank();
                     break;
                 } else {
                     // Update ranks
-                    foreach (Node node in restart.Keys)
+                    foreach (NodeInfo node in restart.Keys)
                         node.updateRank();
                 }
             }
@@ -110,9 +110,9 @@ namespace Recommenders.RWRBased {
         public void run(int nIterations) {
             for (int i = 0; i < nIterations; i++) {
                 Console.WriteLine(i);
-                foreach (Node node in restart.Keys)
+                foreach (NodeInfo node in restart.Keys)
                     node.deliverRank(restart, dampingFactor);
-                foreach (Node node in restart.Keys)
+                foreach (NodeInfo node in restart.Keys)
                     node.updateRank();
             }
         }

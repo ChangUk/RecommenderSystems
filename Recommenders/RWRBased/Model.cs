@@ -11,6 +11,25 @@ namespace Recommenders.RWRBased {
         public double dampingFactor;
         public double[] restart;
 
+        public Model(Graph graph, double dampingFactor) {
+            this.graph = graph;
+            this.nNodes = graph.size();
+            this.dampingFactor = dampingFactor;
+
+            rank = new double[nNodes];
+            nextRank = new double[nNodes];
+            restart = new double[nNodes];
+
+            for (int i = 0; i < nNodes; i++) {
+                // Initialize rank score of each node
+                rank[i] = 1d / nNodes;
+                nextRank[i] = 0;
+
+                // Make restart weight
+                restart[i] = 1d / nNodes;
+            }
+        }
+
         public Model(Graph graph, double dampingFactor, int targetNode) {
             this.graph = graph;
             this.nNodes = graph.size();
