@@ -34,7 +34,7 @@ namespace Recommenders.RWRBased {
             this.graph = graph;
             this.nNodes = graph.size();
             this.dampingFactor = dampingFactor;
-
+            
             rank = new double[nNodes];
             nextRank = new double[nNodes];
             restart = new double[nNodes];
@@ -84,23 +84,27 @@ namespace Recommenders.RWRBased {
         public void deliverRanks() {
             Dictionary<int, ForwardLink[]> forwardLinks = graph.graph;
             for (int i = 0; i < nNodes; i++) {
+                if (!forwardLinks.ContainsKey(i))
+                    continue;
                 ForwardLink[] links = forwardLinks[i];
                 if (links != null && links.Length > 0) {
                     int nLinks = links.Length;
 
                     // Deliver rank score with Random Walk
                     double rank_randomWalk = (1 - dampingFactor) * rank[i];
-                    for (int l = 0; l < nLinks; l++)
-                        nextRank[i] += rank[i] * links[l].weight;
+                    for (int w = 0; w < nLinks; w++) {
+                        ForwardLink link = links[w];
+                        nextRank[link.targetNode] += rank_randomWalk * link.weight;
+                    }
 
                     // Deliver rank score with Restart
                     double rank_restart = rank[i] - rank_randomWalk;
-                    for (int l = 0; l < nLinks; l++)
-                        nextRank[i] += rank[i] * restart[l];
+                    for (int r = 0; r < nNodes; r++)
+                        nextRank[r] += rank_restart * restart[r];
                 } else {
-                    // The rank score of the node is delivered along with only virtual links (restart)
-                    for (int l = 0; l < nNodes; l++)
-                        nextRank[i] += rank[i] * restart[l];
+                    // Dangling node: the rank score is delivered along with only virtual links
+                    for (int r = 0; r < nNodes; r++)
+                        nextRank[r] += rank[i] * restart[r];
                 }
             }
         }
