@@ -69,7 +69,7 @@ namespace Recommenders.RWRBased {
             int n = 0;
             while (true) {
                 // Print out the number of iterations so far
-                Console.WriteLine(n);
+                Console.WriteLine("Iteration: " + (n + 1));
 
                 deliverRanks();
                 if (checkConvergence(threshold)) {

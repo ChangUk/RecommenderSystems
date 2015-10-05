@@ -53,23 +53,36 @@ namespace Recommenders.RWRBased {
             foreach (KeyValuePair<int, List<ForwardLink>> entry in edges) {
                 ForwardLink[] forwardLinks = null;
 
-                if (entry.Value != null && entry.Value.Count > 0) {
-                    int nLinks = entry.Value.Count;
-
-                    // Make an array space for forward links
-                    forwardLinks = new ForwardLink[nLinks];
-
-                    // Calculate sum of weights of the given source node (entry.Key)
-                    int position = 0;
-                    double sumWeights = 0;
-                    foreach (ForwardLink link in entry.Value) {
-                        forwardLinks[position++] = link;
-                        sumWeights += link.weight;
+                if (entry.Value != null) {
+                    // Count the number of explicit(defined) forwardlinks
+                    int nExplicitLinks = 0;
+                    foreach (ForwardLink forwardLink in entry.Value) {
+                        if (forwardLink.type != EdgeType.UNDEFINED)
+                            nExplicitLinks += 1;
                     }
+                    
+                    // The graph should consider only explicit forward links
+                    if (nExplicitLinks > 0) { 
+                        // Make an array space for forward links
+                        forwardLinks = new ForwardLink[nExplicitLinks];
 
-                    // Adjust weights whose sum is 1
-                    for (int i = 0; i < nLinks; i++)
-                        forwardLinks[i].weight /= sumWeights;
+                        // Calculate sum of weights of the given source node (entry.Key)
+                        int idx = 0;
+                        double sumWeights = 0;
+                        foreach (ForwardLink link in entry.Value) {
+                            // Ignore undefined link
+                            if (link.type != EdgeType.UNDEFINED)
+                                continue;
+
+                            // Add link to array and its weight to summation
+                            forwardLinks[idx++] = link;
+                            sumWeights += link.weight;
+                        }
+
+                        // Adjust weights whose sum is 1
+                        for (int i = 0; i < nExplicitLinks; i++)
+                            forwardLinks[i].weight /= sumWeights;
+                    }
                 }
                 
                 // Add forward links of the source node

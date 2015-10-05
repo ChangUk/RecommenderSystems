@@ -1,8 +1,6 @@
-﻿using Recommenders;
-using Recommenders.RWRBased;
+﻿using Recommenders.RWRBased;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 
 namespace TweetRecommender {
@@ -14,19 +12,27 @@ namespace TweetRecommender {
         private SQLiteAdapter dbAdapter;
 
         // Graph information
-        private int nNodes;
-        private int nLinks;
-        public Dictionary<int, Node> allNodes;
-        public Dictionary<int, List<ForwardLink>> allLinks;
+        private int nNodes = 0;
+        private int nLinks = 0;
+        public Dictionary<int, Node> allNodes = new Dictionary<int, Node>();
+        public Dictionary<int, List<ForwardLink>> allLinks = new Dictionary<int, List<ForwardLink>>();
 
         // Necessary for checking node dulpication
-        public Dictionary<long, int> userIDs;
-        public Dictionary<long, int> memberIDs;      // Users who are linked with friendship only
-        public Dictionary<long, int> tweetIDs;
-        
-        public DataLoader(string dbPath) {
+        public Dictionary<long, int> userIDs = new Dictionary<long, int>();
+        public Dictionary<long, int> memberIDs = new Dictionary<long, int>();
+        public Dictionary<long, int> tweetIDs = new Dictionary<long, int>();
+
+        // K-Fold Cross Validation
+        private int nFolds;
+        public HashSet<long> testSet;
+
+        public DataLoader(string dbPath, int nFolds) {
             this.egoUserId = long.Parse(Path.GetFileNameWithoutExtension(dbPath));
             this.dbAdapter = new SQLiteAdapter(dbPath);
+            this.nFolds = nFolds;
+
+            // Add ego user's node
+            addUserNode(egoUserId, NodeType.USER);
         }
 
         public void addUserNode(long id, NodeType type) {
@@ -59,29 +65,51 @@ namespace TweetRecommender {
             }
         }
 
+        public int getLikeCount(int idxNode) {
+            int nLikes = 0;
+            foreach (ForwardLink link in allLinks[idxNode]) {
+                if (link.type == EdgeType.LIKE)
+                    nLikes += 1;
+            }
+            return nLikes;
+        }
+
+        public KeyValuePair<HashSet<long>, HashSet<long>> spliteLikeHistory(HashSet<long> likes, int fold) {
+            List<long> likesList = new List<long>();
+            foreach (long like in likes)
+                likesList.Add(like);
+            likesList.Sort();
+
+            HashSet<long> trainSet = new HashSet<long>();
+            HashSet<long> testSet = new HashSet<long>();
+            int unitSize = likes.Count / nFolds;
+            int idxLowerbound = unitSize * fold;
+            int idxUpperbound = (fold < nFolds - 1) ? unitSize * (fold + 1) : likes.Count;
+            for (int idx = 0; idx < likesList.Count; idx++) {
+                if (idxLowerbound <= idx && idx < idxUpperbound)
+                    trainSet.Add(likesList[idx]);
+                else
+                    testSet.Add(likesList[idx]);
+            }
+            return new KeyValuePair<HashSet<long>, HashSet<long>>(trainSet, testSet);
+        }
+
+        public void graphConfiguration(RecSys type, int fold) {
+            if (type == RecSys.BASELINE)
+                graphConfiguration_baseline(fold);
+            else if (type == RecSys.PROPOSED1)
+                graphConfiguration_proposed1();
+        }
+
         /// <summary>
         /// Baseline method
         /// <para>No user friendship</para>
         /// </summary>
-        public void graphConfiguration_baseline() {
-            Console.WriteLine("Graph(" + egoUserId + " - baseline) Configuration...");
+        public void graphConfiguration_baseline(int fold) {
+            Console.WriteLine("Graph(" + egoUserId + " - baseline) Configuration... Fold #" + fold);
 
-            // Initialize graph information
-            nNodes = 0;
-            nLinks = 0;
-            allNodes = new Dictionary<int, Node>();
-            allLinks = new Dictionary<int, List<ForwardLink>>();
-            userIDs = new Dictionary<long, int>();
-            memberIDs = new Dictionary<long, int>();
-            tweetIDs = new Dictionary<long, int>();
-
-            // Add ego user's node
-            addUserNode(egoUserId, NodeType.USER);
-
-            // Followees of ego user
+            // Get members of ego network
             HashSet<long> followeesOfEgoUser = dbAdapter.getFollowingUsers(egoUserId);
-
-            // Members of ego network
             foreach (long followee in followeesOfEgoUser) {
                 HashSet<long> followeesOfFollowee = dbAdapter.getFollowingUsers(followee);
                 if (followeesOfFollowee.Contains(egoUserId))
@@ -93,31 +121,46 @@ namespace TweetRecommender {
                 long memberId = entry.Key;
                 int idxMember = entry.Value;
 
-                // Retweet
+                // Tweet IDs a member likes
+                HashSet<long> likes = new HashSet<long>();
                 HashSet<long> retweets = dbAdapter.getRetweets(memberId);
-                foreach (long retweet in retweets) {
-                    addTweetNode(retweet, NodeType.ITEM);
-                    int idxTweet = tweetIDs[retweet];
-                    addLink(idxMember, idxTweet, EdgeType.LIKE, 1);
-                    addLink(idxTweet, idxMember, EdgeType.LIKE, 1);
-                }
-
-                // Quote
+                foreach (long retweet in retweets)
+                    likes.Add(retweet);
                 HashSet<long> quotes = dbAdapter.getQuotedTweets(memberId);
-                foreach (long quote in quotes) {
-                    addTweetNode(quote, NodeType.ITEM);
-                    int idxTweet = tweetIDs[quote];
-                    addLink(idxMember, idxTweet, EdgeType.LIKE, 1);
-                    addLink(idxTweet, idxMember, EdgeType.LIKE, 1);
-                }
-
-                // Favorite
+                foreach (long quote in quotes)
+                    likes.Add(quote);
                 HashSet<long> favorites = dbAdapter.getFavoriteTweets(memberId);
-                foreach (long favorite in favorites) {
-                    addTweetNode(favorite, NodeType.ITEM);
-                    int idxTweet = tweetIDs[favorite];
-                    addLink(idxMember, idxTweet, EdgeType.LIKE, 1);
-                    addLink(idxTweet, idxMember, EdgeType.LIKE, 1);
+                foreach (long favorite in favorites)
+                    likes.Add(favorite);
+
+                // If the user is ego user, his like history is divided into training set and test set.
+                if (idxMember == 0) {
+                    // The number of tweets the ego user likes should be more than # of folds.
+                    if (likes.Count < nFolds) {
+                        Console.WriteLine("The number of like history is less than nFolds.");
+                        Console.WriteLine("\t* # of likes: " + likes.Count);
+                        Console.WriteLine("\t* # of folds: " + nFolds);
+                        break;
+                    }
+
+                    // Split ego user's like history into two
+                    var data = spliteLikeHistory(likes, fold);
+                    foreach (long like in data.Key) {               // Likes except test tweets
+                        addTweetNode(like, NodeType.ITEM);
+                        int idxTweet = tweetIDs[like];
+                        addLink(idxMember, idxTweet, EdgeType.LIKE, 1);
+                        addLink(idxTweet, idxMember, EdgeType.LIKE, 1);
+                    }
+
+                    // Set test set
+                    testSet = data.Value;
+                } else {
+                    foreach (long like in likes) {
+                        addTweetNode(like, NodeType.ITEM);
+                        int idxTweet = tweetIDs[like];
+                        addLink(idxMember, idxTweet, EdgeType.LIKE, 1);
+                        addLink(idxTweet, idxMember, EdgeType.LIKE, 1);
+                    }
                 }
             }
 
@@ -133,27 +176,7 @@ namespace TweetRecommender {
         /// <para>Include friendship</para>
         /// </summary>
         public void graphConfiguration_proposed1() {
-            // Initialize graph information
-            nNodes = 0;
-            nLinks = 0;
-            allNodes = new Dictionary<int, Node>();
-            allLinks = new Dictionary<int, List<ForwardLink>>();
-            userIDs = new Dictionary<long, int>();
-            memberIDs = new Dictionary<long, int>();
-            tweetIDs = new Dictionary<long, int>();
 
-            // TODO: proposed method
-            HashSet<long> followeesOfEgoUser = dbAdapter.getFollowingUsers(egoUserId);
-            foreach (long followee in followeesOfEgoUser) {
-                HashSet<long> followeesOfFollowee = dbAdapter.getFollowingUsers(followee);
-                if (followeesOfFollowee.Contains(egoUserId)) {
-                    // Co-followship
-                    addUserNode(followee, NodeType.USER);
-
-                    // Add followship links (undirected)
-
-                }
-            }
         }
 
         /// <summary>
@@ -161,30 +184,7 @@ namespace TweetRecommender {
         /// <para>Include both friend nodes and unfriend nodes</para>
         /// </summary>
         public void graphConfiguration_proposed2() {
-            // Initialize graph information
-            nNodes = 0;
-            nLinks = 0;
-            allNodes = new Dictionary<int, Node>();
-            allLinks = new Dictionary<int, List<ForwardLink>>();
-            userIDs = new Dictionary<long, int>();
-            memberIDs = new Dictionary<long, int>();
-            tweetIDs = new Dictionary<long, int>();
 
-            // TODO: proposed method
-            HashSet<long> followeesOfEgoUser = dbAdapter.getFollowingUsers(egoUserId);
-            foreach (long followee in followeesOfEgoUser) {
-                HashSet<long> followeesOfFollowee = dbAdapter.getFollowingUsers(followee);
-                if (followeesOfFollowee.Contains(egoUserId)) {
-                    // Co-followship
-                    addUserNode(followee, NodeType.USER);
-
-                    // Add followship links (undirected)
-
-                } else {
-                    // OneWay-followship
-                    addUserNode(followee, NodeType.ETC);
-                }
-            }
         }
     }
 }
