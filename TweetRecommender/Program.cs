@@ -9,7 +9,7 @@ namespace TweetRecommender {
     public enum RecSys { BASELINE, PROPOSED1, PROPOSED2 }
 
     public class Program {
-        public static void printResult(HashSet<long> testSet, List<KeyValuePair<long, double>> recommendation) {
+        public static List<double> makeConclusion(HashSet<long> testSet, List<KeyValuePair<long, double>> recommendation) {
             Dictionary<long, int> ranking = new Dictionary<long, int>();
 
             int nHits = 0;
@@ -28,19 +28,34 @@ namespace TweetRecommender {
                 }
             }
 
-            Console.WriteLine("The result of validation:");
+            // Evaluation metrics
+            List<double> result = new List<double>();
+            result.Add(nHits);                  // The number of hits
+            double averagePrecision = (nHits == 0) ? 0 : sumPrecision / nHits;
+            result.Add(averagePrecision);       // Average Precision
+
+            // Console print
+            Console.WriteLine("\tThe result of validation:");
             Console.WriteLine("\t# of Hits: " + nHits);
             Console.WriteLine("\t# of Testset: " + testSet.Count);
-            Console.WriteLine("\tAverage Precision: " + (sumPrecision / nHits));
+            Console.WriteLine("\tAverage Precision: " + averagePrecision);
             foreach (KeyValuePair<long, int> entry in ranking)
-                Console.WriteLine(entry.Key + "\t" + entry.Value);
+                Console.WriteLine("\tHit! " + entry.Key + "\t" + entry.Value);
+
+            return result;
         }
 
-        static void Main(string[] args) {
+        public static void Main(string[] args) {
             Stopwatch stopwatch = Stopwatch.StartNew();
+
+            // File writer
+            StreamWriter file = new StreamWriter(args[0] + "result.dat", true);
 
             string[] sqliteDBs = Directory.GetFiles(args[0], "*.sqlite");
             foreach (string dbPath in sqliteDBs) {
+                // Get ego user's name
+                string egoUser = Path.GetFileNameWithoutExtension(dbPath);
+
                 // K-Fold Cross Validation
                 int nFolds = int.Parse(args[1]);
                 for (int fold = 0; fold < nFolds; fold++) {
@@ -60,10 +75,15 @@ namespace TweetRecommender {
                     var recommendation = recommender.Recommendation(0, 0.15f, int.Parse(args[2]));
 
                     // Print out validation result
-                    printResult(loader.testSet, recommendation);
+                    var result = makeConclusion(loader.testSet, recommendation);
+                    file.Write(egoUser + "\t" + fold);
+                    for (int i = 0; i < result.Count; i++)
+                        file.Write("\t" + result[i]);
+                    file.WriteLine();
                 }
             }
-            
+
+            file.Close();
             stopwatch.Stop();
             Tools.printExecutionTime(stopwatch);
             Console.WriteLine("Finished!");

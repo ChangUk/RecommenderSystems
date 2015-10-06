@@ -55,11 +55,7 @@ namespace Recommenders.RWRBased {
         }
 
         public void run(double threshold) {
-            int n = 0;
             while (true) {
-                // Print out the number of iterations so far
-                Console.WriteLine("Iteration: " + (n + 1));
-
                 deliverRanks();
                 if (checkConvergence(threshold)) {
                     updateRanks();
@@ -71,10 +67,6 @@ namespace Recommenders.RWRBased {
 
         public void run(int nIterations) {
             for (int n = 0; n < nIterations; n++) {
-                // Print out the number of iterations so far
-                Console.WriteLine("Iteration: " + (n + 1));
-
-                // Deliever and update ranks
                 deliverRanks();
                 updateRanks();
             }

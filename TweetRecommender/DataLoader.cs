@@ -65,15 +65,6 @@ namespace TweetRecommender {
             }
         }
 
-        public int getLikeCount(int idxNode) {
-            int nLikes = 0;
-            foreach (ForwardLink link in allLinks[idxNode]) {
-                if (link.type == EdgeType.LIKE)
-                    nLikes += 1;
-            }
-            return nLikes;
-        }
-
         public KeyValuePair<HashSet<long>, HashSet<long>> splitLikeHistory(HashSet<long> likes, int fold) {
             List<long> likesList = new List<long>();
             foreach (long like in likes)
@@ -87,9 +78,9 @@ namespace TweetRecommender {
             int idxUpperbound = (fold < nFolds - 1) ? unitSize * (fold + 1) : likes.Count;
             for (int idx = 0; idx < likesList.Count; idx++) {
                 if (idxLowerbound <= idx && idx < idxUpperbound)
-                    trainSet.Add(likesList[idx]);
-                else
                     testSet.Add(likesList[idx]);
+                else
+                    trainSet.Add(likesList[idx]);
             }
             return new KeyValuePair<HashSet<long>, HashSet<long>>(trainSet, testSet);
         }
@@ -106,7 +97,7 @@ namespace TweetRecommender {
         /// <para>No user friendship</para>
         /// </summary>
         public void graphConfiguration_baseline(int fold) {
-            Console.WriteLine("Graph(" + egoUserId + " - baseline) Configuration... Fold #" + (fold + 1));
+            Console.WriteLine("Graph(" + egoUserId + " - baseline) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
             // Get members of ego network
             HashSet<long> followeesOfEgoUser = dbAdapter.getFollowingUsers(egoUserId);
@@ -137,7 +128,7 @@ namespace TweetRecommender {
                 if (idxMember == 0) {
                     // The number of tweets the ego user likes should be more than # of folds.
                     if (likes.Count < nFolds) {
-                        Console.WriteLine("The number of like history is less than nFolds.");
+                        Console.WriteLine("ERROR: The number of like history is less than nFolds.");
                         Console.WriteLine("\t* # of likes: " + likes.Count);
                         Console.WriteLine("\t* # of folds: " + nFolds);
                         break;
@@ -165,10 +156,9 @@ namespace TweetRecommender {
             }
 
             // Print out the graph information
-            Console.WriteLine("# of nodes: " + nNodes);
-            Console.WriteLine("\t* User: " + userIDs.Count);
-            Console.WriteLine("\t* Tweet: " + tweetIDs.Count);
-            Console.WriteLine("# of links: " + nLinks);
+            Console.WriteLine("\t# of nodes: " + nNodes
+                + " - User(" + userIDs.Count + "), Tweet(" + tweetIDs.Count + ")");
+            Console.WriteLine("\t# of links: " + nLinks);
         }
 
         /// <summary>

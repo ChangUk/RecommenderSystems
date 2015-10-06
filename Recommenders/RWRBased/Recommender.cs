@@ -21,8 +21,10 @@ namespace Recommenders.RWRBased {
 
             // Make an exception list of items for target user
             var linksOfTargetUser = new List<int>();
-            foreach (ForwardLink link in graph.edges[idxTargetUser])
-                linksOfTargetUser.Add(link.targetNode);
+            foreach (ForwardLink link in graph.edges[idxTargetUser]) {
+                if (link.type == EdgeType.LIKE)
+                    linksOfTargetUser.Add(link.targetNode);
+            }
 
             // Make candidate items' list with their rank scores
             var recommendation = new List<KeyValuePair<long, double>>();
