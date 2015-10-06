@@ -21,6 +21,7 @@ namespace TweetRecommender {
         public Dictionary<long, int> userIDs = new Dictionary<long, int>();
         public Dictionary<long, int> memberIDs = new Dictionary<long, int>();
         public Dictionary<long, int> tweetIDs = new Dictionary<long, int>();
+        public Dictionary<long, int> thirdPartyIDs = new Dictionary<long, int>();
 
         // K-Fold Cross Validation
         private int nFolds;
@@ -30,9 +31,6 @@ namespace TweetRecommender {
             this.egoUserId = long.Parse(Path.GetFileNameWithoutExtension(dbPath));
             this.dbAdapter = new SQLiteAdapter(dbPath);
             this.nFolds = nFolds;
-
-            // Add ego user's node
-            addUserNode(egoUserId, NodeType.USER);
         }
 
         public void addUserNode(long id, NodeType type) {
@@ -85,11 +83,11 @@ namespace TweetRecommender {
             return new KeyValuePair<HashSet<long>, HashSet<long>>(trainSet, testSet);
         }
 
-        public void graphConfiguration(RecSys type, int fold) {
-            if (type == RecSys.BASELINE)
+        public void graphConfiguration(Methodology type, int fold) {
+            if (type == Methodology.BASELINE)
                 graphConfiguration_baseline(fold);
-            else if (type == RecSys.PROPOSED1)
-                graphConfiguration_proposed1();
+            else if (type == Methodology.INCL_FRIENDSHIP)
+                graphConfiguration_friendship(fold);
         }
 
         /// <summary>
@@ -99,6 +97,36 @@ namespace TweetRecommender {
         public void graphConfiguration_baseline(int fold) {
             Console.WriteLine("Graph(" + egoUserId + " - baseline) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
+            // Makeup user and tweet nodes and their relations
+            addUserNodes();
+            addTweetNodesAndLikeEdges(fold);
+
+            // Print out the graph information
+            printGraphInfo();
+        }
+
+        /// <summary>
+        /// Propoased method #1
+        /// <para>Include friendship relations</para>
+        /// </summary>
+        public void graphConfiguration_friendship(int fold) {
+            Console.WriteLine("Graph(" + egoUserId + " - proposed1) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+
+            // Makeup user and tweet nodes and their relations
+            addUserNodes();
+            addTweetNodesAndLikeEdges(fold);
+
+            // Add friendship links among network users
+            addFriendship();
+
+            // Print out the graph information
+            printGraphInfo();
+        }
+
+        public void addUserNodes() {
+            // Add ego user's node
+            addUserNode(egoUserId, NodeType.USER);
+
             // Get members of ego network
             HashSet<long> followeesOfEgoUser = dbAdapter.getFollowingUsers(egoUserId);
             foreach (long followee in followeesOfEgoUser) {
@@ -106,7 +134,9 @@ namespace TweetRecommender {
                 if (followeesOfFollowee.Contains(egoUserId))
                     addUserNode(followee, NodeType.USER);
             }
+        }
 
+        public void addTweetNodesAndLikeEdges(int fold) {
             // Tweets that members like: retweet, quote, favorite
             foreach (KeyValuePair<long, int> entry in memberIDs) {
                 long memberId = entry.Key;
@@ -154,27 +184,33 @@ namespace TweetRecommender {
                     }
                 }
             }
-
-            // Print out the graph information
-            Console.WriteLine("\t# of nodes: " + nNodes
-                + " - User(" + userIDs.Count + "), Tweet(" + tweetIDs.Count + ")");
-            Console.WriteLine("\t# of links: " + nLinks);
         }
 
-        /// <summary>
-        /// Propoased method #1
-        /// <para>Include friendship</para>
-        /// </summary>
-        public void graphConfiguration_proposed1() {
+        public void addFriendship() {
+            foreach (long memberId in memberIDs.Keys) {
+                HashSet<long> followees = dbAdapter.getFollowingUsers(memberId);
+                foreach (long followee in followees) {
+                    if (!memberIDs.ContainsKey(followee))
+                        continue;
+                    addLink(userIDs[memberId], userIDs[followee], EdgeType.FRIENDSHIP, 1);
+                    addLink(userIDs[followee], userIDs[memberId], EdgeType.FRIENDSHIP, 1);
+                }
+            }
+        }
+
+        public void addFollowshipToThirdParty() {
 
         }
 
-        /// <summary>
-        /// Propoased method #2
-        /// <para>Include both friend nodes and unfriend nodes</para>
-        /// </summary>
-        public void graphConfiguration_proposed2() {
+        public void addAuthorship() {
 
+        }
+
+        public void printGraphInfo() {
+            Console.WriteLine("\t* Graph information");
+            Console.WriteLine("\t\t- # of nodes: " + nNodes
+                + " - User(" + userIDs.Count + "), Tweet(" + tweetIDs.Count + "), ThirdParty(" + thirdPartyIDs.Count + ")");
+            Console.WriteLine("\t\t- # of links: " + nLinks);
         }
     }
 }
