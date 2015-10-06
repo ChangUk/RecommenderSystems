@@ -44,7 +44,10 @@ namespace TweetRecommender {
 
             return result;
         }
-
+        
+        // Argument #0: path of directory that containes SQLite DB files
+        // Argument #1: number of folds
+        // Argument #2: number of iterations for Random Walk with Restart algorithm
         public static void Main(string[] args) {
             Stopwatch stopwatch = Stopwatch.StartNew();
 
@@ -76,7 +79,7 @@ namespace TweetRecommender {
 
                     // Print out validation result
                     var result = makeConclusion(loader.testSet, recommendation);
-                    file.Write(egoUser + "\t" + fold);
+                    file.Write(RecSys.BASELINE + "\t" + egoUser + "\t" + fold);
                     for (int i = 0; i < result.Count; i++)
                         file.Write("\t" + result[i]);
                     file.WriteLine();
