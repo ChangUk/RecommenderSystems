@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Recommenders.RWRBased {
     public struct Node {
@@ -50,13 +49,13 @@ namespace Recommenders.RWRBased {
         }
 
         public void buildGraph() {
-            foreach (KeyValuePair<int, List<ForwardLink>> entry in edges) {
+            for (int i = 0; i < nodes.Count; i++) {
                 ForwardLink[] forwardLinks = null;
 
-                if (entry.Value != null) {
+                if (edges.ContainsKey(i)) {
                     // Count the number of explicit(defined) forwardlinks
                     int nExplicitLinks = 0;
-                    foreach (ForwardLink forwardLink in entry.Value) {
+                    foreach (ForwardLink forwardLink in edges[i]) {
                         if (forwardLink.type != EdgeType.UNDEFINED)
                             nExplicitLinks += 1;
                     }
@@ -69,7 +68,7 @@ namespace Recommenders.RWRBased {
                         // Calculate sum of weights of the given source node (entry.Key)
                         int idx = 0;
                         double sumWeights = 0;
-                        foreach (ForwardLink link in entry.Value) {
+                        foreach (ForwardLink link in edges[i]) {
                             // Ignore undefined link
                             if (link.type != EdgeType.UNDEFINED)
                                 continue;
@@ -80,13 +79,13 @@ namespace Recommenders.RWRBased {
                         }
 
                         // Adjust weights whose sum is 1
-                        for (int i = 0; i < nExplicitLinks; i++)
-                            forwardLinks[i].weight /= sumWeights;
+                        for (int f = 0; f < nExplicitLinks; f++)
+                            forwardLinks[f].weight /= sumWeights;
                     }
                 }
                 
                 // Add forward links of the source node
-                graph.Add(entry.Key, forwardLinks);
+                graph.Add(i, forwardLinks);
             }
         }
 

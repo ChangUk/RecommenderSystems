@@ -11,6 +11,7 @@ namespace TweetRecommender {
     public class Program {
         public static void printResult(HashSet<long> testSet, List<KeyValuePair<long, double>> recommendation) {
             Dictionary<long, int> ranking = new Dictionary<long, int>();
+
             int nHits = 0;
             double sumPrecision = 0;
             for (int i = 0; i < recommendation.Count; i++) {
@@ -40,9 +41,6 @@ namespace TweetRecommender {
 
             string[] sqliteDBs = Directory.GetFiles(args[0], "*.sqlite");
             foreach (string dbPath in sqliteDBs) {
-                // Index of target user
-                int idxTargetUser = 0;
-
                 // K-Fold Cross Validation
                 int nFolds = int.Parse(args[1]);
                 for (int fold = 0; fold < nFolds; fold++) {
@@ -59,12 +57,11 @@ namespace TweetRecommender {
 
                     // Get recommendation list
                     Recommender recommender = new Recommender(graph);
-                    var recommendation = recommender.Recommendation(idxTargetUser, 0.15f, int.Parse(args[2]));
+                    var recommendation = recommender.Recommendation(0, 0.15f, int.Parse(args[2]));
 
                     // Print out validation result
                     printResult(loader.testSet, recommendation);
                 }
-                break;
             }
             
             stopwatch.Stop();

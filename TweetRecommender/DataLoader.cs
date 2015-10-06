@@ -74,7 +74,7 @@ namespace TweetRecommender {
             return nLikes;
         }
 
-        public KeyValuePair<HashSet<long>, HashSet<long>> spliteLikeHistory(HashSet<long> likes, int fold) {
+        public KeyValuePair<HashSet<long>, HashSet<long>> splitLikeHistory(HashSet<long> likes, int fold) {
             List<long> likesList = new List<long>();
             foreach (long like in likes)
                 likesList.Add(like);
@@ -106,7 +106,7 @@ namespace TweetRecommender {
         /// <para>No user friendship</para>
         /// </summary>
         public void graphConfiguration_baseline(int fold) {
-            Console.WriteLine("Graph(" + egoUserId + " - baseline) Configuration... Fold #" + fold);
+            Console.WriteLine("Graph(" + egoUserId + " - baseline) Configuration... Fold #" + (fold + 1));
 
             // Get members of ego network
             HashSet<long> followeesOfEgoUser = dbAdapter.getFollowingUsers(egoUserId);
@@ -144,7 +144,7 @@ namespace TweetRecommender {
                     }
 
                     // Split ego user's like history into two
-                    var data = spliteLikeHistory(likes, fold);
+                    var data = splitLikeHistory(likes, fold);
                     foreach (long like in data.Key) {               // Likes except test tweets
                         addTweetNode(like, NodeType.ITEM);
                         int idxTweet = tweetIDs[like];

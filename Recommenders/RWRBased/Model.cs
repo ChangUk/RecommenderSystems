@@ -49,17 +49,6 @@ namespace Recommenders.RWRBased {
             }
         }
 
-        public void run(int nIterations) {
-            for (int n = 0; n < nIterations; n++) {
-                // Print out the number of iterations so far
-                Console.WriteLine("Iteration: " + (n + 1));
-                
-                // Deliever and update ranks
-                deliverRanks();
-                updateRanks();
-            }
-        }
-
         public void run() {
             double threshold = (1 / double.MaxValue) * graph.size();
             run(threshold);
@@ -80,12 +69,21 @@ namespace Recommenders.RWRBased {
             }
         }
 
+        public void run(int nIterations) {
+            for (int n = 0; n < nIterations; n++) {
+                // Print out the number of iterations so far
+                Console.WriteLine("Iteration: " + (n + 1));
+
+                // Deliever and update ranks
+                deliverRanks();
+                updateRanks();
+            }
+        }
+
         // Deliver ranks along with forward links
         public void deliverRanks() {
             Dictionary<int, ForwardLink[]> forwardLinks = graph.graph;
             for (int i = 0; i < nNodes; i++) {
-                if (!forwardLinks.ContainsKey(i))
-                    continue;
                 ForwardLink[] links = forwardLinks[i];
                 if (links != null && links.Length > 0) {
                     int nLinks = links.Length;
