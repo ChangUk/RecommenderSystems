@@ -12,7 +12,8 @@ namespace TweetRecommender {
     public class Program {
         public static Dictionary<EvaluationMetric, double> makeConclusion(HashSet<long> testSet, List<KeyValuePair<long, double>> recommendation) {
             Dictionary<long, int> ranking = new Dictionary<long, int>();
-            
+            Dictionary<long, double> score = new Dictionary<long, double>();
+
             int nRecommendation = recommendation.Count;
             int nHits = 0;
             double sumPrecision = 0;
@@ -20,9 +21,11 @@ namespace TweetRecommender {
                 if (recommendation[i].Value == 0)
                     break;
                 long recommendedTweetId = recommendation[i].Key;
+                double rankOfTweet = recommendation[i].Value;
                 if (testSet.Contains(recommendedTweetId)) {
                     // Record ranking of the current hit
                     ranking.Add(recommendedTweetId, i);
+                    score.Add(recommendedTweetId, rankOfTweet);
 
                     // Measure several values for evaluation metrics
                     nHits += 1;
@@ -44,7 +47,8 @@ namespace TweetRecommender {
                 Console.WriteLine("\t* Ranking per hit");
             foreach (KeyValuePair<long, int> entry in ranking) {
                 string percentage = ((float)entry.Value * 100 / nRecommendation).ToString("#.##");
-                Console.WriteLine("\t\t- " + entry.Key + ":\t" + entry.Value + "/" + nRecommendation + " (" + percentage + "%)");
+                Console.WriteLine("\t\t- " + entry.Key + "(" + score[entry.Key] + "):\t"
+                    + entry.Value + "/" + nRecommendation + " (" + percentage + "%)");
             }
 
             return result;

@@ -70,7 +70,7 @@ namespace Recommenders.RWRBased {
                         double sumWeights = 0;
                         foreach (ForwardLink link in edges[i]) {
                             // Ignore undefined link
-                            if (link.type != EdgeType.UNDEFINED)
+                            if (link.type == EdgeType.UNDEFINED)
                                 continue;
 
                             // Add link to array and its weight to summation
