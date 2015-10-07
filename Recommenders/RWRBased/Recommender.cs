@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Recommenders.RWRBased {
     public enum NodeType { UNDEFINED, USER, ITEM, ETC }
-    public enum EdgeType { UNDEFINED, LIKE, FRIENDSHIP, FOLLOW, MENTION, ATHORSHIP, PURCHASE, ETC }
+    public enum EdgeType { UNDEFINED, LIKE, FRIENDSHIP, FOLLOW, MENTION, AUTHORSHIP, PURCHASE, ETC }
 
     public class Recommender {
         private Graph graph;

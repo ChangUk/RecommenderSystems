@@ -33,6 +33,7 @@ namespace TweetRecommender {
             this.nFolds = nFolds;
         }
 
+        // Add user node including third party users
         public void addUserNode(long id, NodeType type) {
             if (!userIDs.ContainsKey(id)) {
                 Node node = new Node(id, type);
@@ -40,6 +41,8 @@ namespace TweetRecommender {
                 userIDs.Add(id, nNodes);
                 if (type == NodeType.USER)
                     memberIDs.Add(id, nNodes);
+                else
+                    thirdPartyIDs.Add(id, nNodes);
                 nNodes += 1;
             }
         }
@@ -88,6 +91,10 @@ namespace TweetRecommender {
                 graphConfiguration_baseline(fold);
             else if (type == Methodology.INCL_FRIENDSHIP)
                 graphConfiguration_friendship(fold);
+            else if (type == Methodology.INCL_ALLFOLLOWSHIP)
+                graphConfiguration_allFollowship(fold);
+            else if (type == Methodology.INCL_AUTHORSHIP)
+                graphConfiguration_authorship(fold);
         }
 
         /// <summary>
@@ -95,7 +102,7 @@ namespace TweetRecommender {
         /// <para>No user friendship</para>
         /// </summary>
         public void graphConfiguration_baseline(int fold) {
-            Console.WriteLine("Graph(" + egoUserId + " - baseline) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+            Console.WriteLine("Graph(" + egoUserId + " - 0.baseline) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
             // Makeup user and tweet nodes and their relations
             addUserNodes();
@@ -110,7 +117,7 @@ namespace TweetRecommender {
         /// <para>Include friendship relations</para>
         /// </summary>
         public void graphConfiguration_friendship(int fold) {
-            Console.WriteLine("Graph(" + egoUserId + " - proposed1) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+            Console.WriteLine("Graph(" + egoUserId + " - 1.incl_friendship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
             // Makeup user and tweet nodes and their relations
             addUserNodes();
@@ -118,6 +125,45 @@ namespace TweetRecommender {
 
             // Add friendship links among network users
             addFriendship();
+
+            // Print out the graph information
+            printGraphInfo();
+        }
+
+        /// <summary>
+        /// Propoased method #2
+        /// <para>Include both friendship and followship third party users relations</para>
+        /// </summary>
+        public void graphConfiguration_allFollowship(int fold) {
+            Console.WriteLine("Graph(" + egoUserId + " - 2.incl_allFollowship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+
+            // Makeup user and tweet nodes and their relations
+            addUserNodes();
+            addTweetNodesAndLikeEdges(fold);
+
+            // Add followship links not only among ego network members but also third party users
+            addFriendshipAndFollowship();
+
+            // Print out the graph information
+            printGraphInfo();
+        }
+
+        /// <summary>
+        /// Propoased method #3
+        /// <para>Include authorship relations</para>
+        /// </summary>
+        public void graphConfiguration_authorship(int fold) {
+            Console.WriteLine("Graph(" + egoUserId + " - 3.incl_authorship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+
+            // Makeup user and tweet nodes and their relations
+            addUserNodes();
+            addTweetNodesAndLikeEdges(fold);
+
+            // Add friendship links among network users
+            addFriendship();
+
+            // Add authorship of members
+            addAuthorship();
 
             // Print out the graph information
             printGraphInfo();
@@ -138,9 +184,9 @@ namespace TweetRecommender {
 
         public void addTweetNodesAndLikeEdges(int fold) {
             // Tweets that members like: retweet, quote, favorite
-            foreach (KeyValuePair<long, int> entry in memberIDs) {
-                long memberId = entry.Key;
-                int idxMember = entry.Value;
+            foreach (long memberId in memberIDs.Keys) {
+                // Node index of given member
+                int idxMember = userIDs[memberId];
 
                 // Tweet IDs a member likes
                 HashSet<long> likes = new HashSet<long>();
@@ -168,9 +214,8 @@ namespace TweetRecommender {
                     var data = splitLikeHistory(likes, fold);
                     foreach (long like in data.Key) {               // Likes except test tweets
                         addTweetNode(like, NodeType.ITEM);
-                        int idxTweet = tweetIDs[like];
-                        addLink(idxMember, idxTweet, EdgeType.LIKE, 1);
-                        addLink(idxTweet, idxMember, EdgeType.LIKE, 1);
+                        addLink(idxMember, tweetIDs[like], EdgeType.LIKE, 1);
+                        addLink(tweetIDs[like], idxMember, EdgeType.LIKE, 1);
                     }
 
                     // Set test set
@@ -178,32 +223,80 @@ namespace TweetRecommender {
                 } else {
                     foreach (long like in likes) {
                         addTweetNode(like, NodeType.ITEM);
-                        int idxTweet = tweetIDs[like];
-                        addLink(idxMember, idxTweet, EdgeType.LIKE, 1);
-                        addLink(idxTweet, idxMember, EdgeType.LIKE, 1);
+                        addLink(idxMember, tweetIDs[like], EdgeType.LIKE, 1);
+                        addLink(tweetIDs[like], idxMember, EdgeType.LIKE, 1);
                     }
                 }
             }
         }
 
         public void addFriendship() {
+            addFollowship(false);
+        }
+
+        public void addFriendshipAndFollowship() {
+            addFollowship(true);
+        }
+
+        public void addFollowship(bool inclThirdParty) {
             foreach (long memberId in memberIDs.Keys) {
+                // Node index of given member
+                int idxMember = userIDs[memberId];
+
                 HashSet<long> followees = dbAdapter.getFollowingUsers(memberId);
                 foreach (long followee in followees) {
-                    if (!memberIDs.ContainsKey(followee))
-                        continue;
-                    addLink(userIDs[memberId], userIDs[followee], EdgeType.FRIENDSHIP, 1);
-                    addLink(userIDs[followee], userIDs[memberId], EdgeType.FRIENDSHIP, 1);
+                    if (memberIDs.ContainsKey(followee)) {
+                        // Add links between members; the member nodes are already included in graph
+                        addLink(idxMember, userIDs[followee], EdgeType.FRIENDSHIP, 1);
+                        addLink(userIDs[followee], idxMember, EdgeType.FRIENDSHIP, 1);
+                    } else {
+                        if (inclThirdParty == true) {
+                            // Add third part user
+                            addUserNode(followee, NodeType.ETC);
+
+                            // Add links between member and third party user
+                            addLink(idxMember, userIDs[followee], EdgeType.FOLLOW, 1);
+                            addLink(userIDs[followee], idxMember, EdgeType.FOLLOW, 1);
+                        }
+                    }
                 }
             }
         }
 
-        public void addFollowshipToThirdParty() {
+        public void addThirdPartyFollowship() {
+            foreach (long memberId in memberIDs.Keys) {
+                // Node index of given member
+                int idxMember = userIDs[memberId];
+                
+                HashSet<long> followees = dbAdapter.getFollowingUsers(memberId);
+                foreach (long followee in followees) {
+                    if (!memberIDs.ContainsKey(followee)) {
+                        // Add third part user
+                        addUserNode(followee, NodeType.ETC);
 
+                        // Add links between member and third party user
+                        addLink(idxMember, userIDs[followee], EdgeType.FOLLOW, 1);
+                        addLink(userIDs[followee], idxMember, EdgeType.FOLLOW, 1);
+                    }
+                }
+            }
         }
 
         public void addAuthorship() {
+            foreach (long memberId in memberIDs.Keys) {
+                // Node index of given member
+                int idxMember = userIDs[memberId];
 
+                HashSet<long> timeline = dbAdapter.getAuthorship(memberId);
+                foreach (long tweet in timeline) {
+                    if (!tweetIDs.ContainsKey(tweet))
+                        continue;
+
+                    // Add links between ego network member and tweet written by himself/herself
+                    addLink(idxMember, tweetIDs[tweet], EdgeType.AUTHORSHIP, 1);
+                    addLink(tweetIDs[tweet], idxMember, EdgeType.AUTHORSHIP, 1);
+                }
+            }
         }
 
         public void printGraphInfo() {

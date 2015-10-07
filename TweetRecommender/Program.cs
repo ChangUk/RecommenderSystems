@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.IO;
 
 namespace TweetRecommender {
-    public enum Methodology { BASELINE, INCL_FRIENDSHIP, PROPOSED2 }
+    public enum Methodology { BASELINE, INCL_FRIENDSHIP, INCL_ALLFOLLOWSHIP, INCL_AUTHORSHIP, INCL_THIRDPARTY }
     public enum EvaluationMetric { HIT, AVGPRECISION }
 
     public class Program {
