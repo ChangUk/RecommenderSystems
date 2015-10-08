@@ -7,6 +7,7 @@ namespace TweetRecommender {
     public class DataLoader {
         // Ego user's ID
         private long egoUserId;
+        public int nLikesOfEgoUser;
 
         // Database adapter
         private SQLiteAdapter dbAdapter;
@@ -102,7 +103,8 @@ namespace TweetRecommender {
         /// <para>No user friendship</para>
         /// </summary>
         public void graphConfiguration_baseline(int fold) {
-            Console.WriteLine("Graph(" + egoUserId + " - 0.baseline) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+            lock (Program.locker)
+                Console.WriteLine("Graph(" + egoUserId + " - 0.baseline) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
             // Makeup user and tweet nodes and their relations
             addUserNodes();
@@ -117,7 +119,8 @@ namespace TweetRecommender {
         /// <para>Include friendship relations</para>
         /// </summary>
         public void graphConfiguration_friendship(int fold) {
-            Console.WriteLine("Graph(" + egoUserId + " - 1.incl_friendship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+            lock (Program.locker)
+                Console.WriteLine("Graph(" + egoUserId + " - 1.incl_friendship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
             // Makeup user and tweet nodes and their relations
             addUserNodes();
@@ -135,7 +138,8 @@ namespace TweetRecommender {
         /// <para>Include both friendship and followship third party users relations</para>
         /// </summary>
         public void graphConfiguration_allFollowship(int fold) {
-            Console.WriteLine("Graph(" + egoUserId + " - 2.incl_allFollowship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+            lock (Program.locker)
+                Console.WriteLine("Graph(" + egoUserId + " - 2.incl_allFollowship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
             // Makeup user and tweet nodes and their relations
             addUserNodes();
@@ -153,7 +157,8 @@ namespace TweetRecommender {
         /// <para>Include authorship relations</para>
         /// </summary>
         public void graphConfiguration_authorship(int fold) {
-            Console.WriteLine("Graph(" + egoUserId + " - 3.incl_authorship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+            lock (Program.locker)
+                Console.WriteLine("Graph(" + egoUserId + " - 3.incl_authorship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
             // Makeup user and tweet nodes and their relations
             addUserNodes();
@@ -202,6 +207,9 @@ namespace TweetRecommender {
 
                 // If the user is ego user, his like history is divided into training set and test set.
                 if (idxMember == 0) {
+                    // The number of likes of ego user
+                    nLikesOfEgoUser = likes.Count;
+
                     // The number of tweets the ego user likes should be more than # of folds.
                     if (likes.Count < nFolds) {
                         Console.WriteLine("ERROR: The number of like history is less than nFolds.");
@@ -299,11 +307,23 @@ namespace TweetRecommender {
             }
         }
 
+        public void addMentionCount(bool isUnary) {
+            foreach (long memberId in memberIDs.Keys) {
+                // Node index of given member
+                int idxMember = userIDs[memberId];
+
+                Dictionary<long, int> timeline = dbAdapter.getMentionCounts(memberId);
+
+            }
+        }
+
         public void printGraphInfo() {
-            Console.WriteLine("\t* Graph information");
-            Console.WriteLine("\t\t- # of nodes: " + nNodes
-                + " - User(" + userIDs.Count + "), Tweet(" + tweetIDs.Count + "), ThirdParty(" + thirdPartyIDs.Count + ")");
-            Console.WriteLine("\t\t- # of links: " + nLinks);
+            //lock (Program.locker) {
+            //    Console.WriteLine("\t* Graph information");
+            //    Console.WriteLine("\t\t- # of nodes: " + nNodes
+            //        + " - User(" + userIDs.Count + "), Tweet(" + tweetIDs.Count + "), ThirdParty(" + thirdPartyIDs.Count + ")");
+            //    Console.WriteLine("\t\t- # of links: " + nLinks);
+            //}
         }
     }
 }
