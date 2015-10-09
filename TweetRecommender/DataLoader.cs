@@ -7,7 +7,7 @@ namespace TweetRecommender {
     public class DataLoader {
         // Ego user's ID
         private long egoUserId;
-        public int nLikesOfEgoUser;
+        public int cntLikesOfEgoUser;
 
         // Database adapter
         private SQLiteAdapter dbAdapter;
@@ -67,6 +67,47 @@ namespace TweetRecommender {
             }
         }
 
+        public bool checkEgoNetworkValidation() {
+            int cntLikes = getLikeCountOfEgoUser();
+            int cntFriends = getFriendsCountOfEgoUser();
+            if (cntLikes < nFolds || cntLikes < 50 || cntFriends < 50) {
+                Console.WriteLine("ERROR: The number of like history is less than nFolds.");
+                Console.WriteLine("\t* # of likes: " + cntLikes);
+                Console.WriteLine("\t* # of friends: " + cntFriends);
+                Console.WriteLine("\t* # of folds: " + nFolds);
+                return false;
+            }
+            return true;
+        }
+
+        public int getLikeCountOfEgoUser() {
+            // Tweet IDs a member likes
+            HashSet<long> likes = new HashSet<long>();
+            HashSet<long> retweets = dbAdapter.getRetweets(egoUserId);
+            foreach (long retweet in retweets)
+                likes.Add(retweet);
+            HashSet<long> quotes = dbAdapter.getQuotedTweets(egoUserId);
+            foreach (long quote in quotes)
+                likes.Add(quote);
+            HashSet<long> favorites = dbAdapter.getFavoriteTweets(egoUserId);
+            foreach (long favorite in favorites)
+                likes.Add(favorite);
+            cntLikesOfEgoUser = likes.Count;
+            return likes.Count;
+        }
+
+        public int getFriendsCountOfEgoUser() {
+            // Get friends of ego network
+            HashSet<long> friends = new HashSet<long>();
+            HashSet<long> followeesOfEgoUser = dbAdapter.getFollowingUsers(egoUserId);
+            foreach (long followee in followeesOfEgoUser) {
+                HashSet<long> followeesOfFollowee = dbAdapter.getFollowingUsers(followee);
+                if (followeesOfFollowee.Contains(egoUserId))
+                    friends.Add(followee);
+            }
+            return friends.Count;
+        }
+
         public KeyValuePair<HashSet<long>, HashSet<long>> splitLikeHistory(HashSet<long> likes, int fold) {
             List<long> likesList = new List<long>();
             foreach (long like in likes)
@@ -87,18 +128,16 @@ namespace TweetRecommender {
             return new KeyValuePair<HashSet<long>, HashSet<long>>(trainSet, testSet);
         }
 
-        public bool graphConfiguration(Methodology type, int fold) {
+        public void graphConfiguration(Methodology type, int fold) {
             switch (type) {
                 case Methodology.BASELINE:
-                    return graphConfiguration_baseline(fold);
+                    graphConfiguration_baseline(fold); break;
                 case Methodology.INCL_FRIENDSHIP:
-                    return graphConfiguration_friendship(fold);
+                    graphConfiguration_friendship(fold); break;
                 case Methodology.INCL_ALLFOLLOWSHIP:
-                    return graphConfiguration_allFollowship(fold);
+                    graphConfiguration_allFollowship(fold); break;
                 case Methodology.INCL_AUTHORSHIP:
-                    return graphConfiguration_authorship(fold);
-                default:
-                    return false;
+                    graphConfiguration_authorship(fold); break;
             }
         }
 
@@ -106,78 +145,67 @@ namespace TweetRecommender {
         /// Baseline method
         /// <para>No user friendship</para>
         /// </summary>
-        public bool graphConfiguration_baseline(int fold) {
+        public void graphConfiguration_baseline(int fold) {
             lock (Program.locker)
                 Console.WriteLine("Graph(" + egoUserId + " - 0.baseline) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
             // Makeup user and tweet nodes and their relations
             addUserNodes();
-            bool isValid = addTweetNodesAndLikeEdges(fold);
-            if (isValid == false)
-                return false;
+            addTweetNodesAndLikeEdges(fold);
 
             // Print out the graph information
             printGraphInfo();
-            return true;
         }
 
         /// <summary>
         /// Propoased method #1
         /// <para>Include friendship relations</para>
         /// </summary>
-        public bool graphConfiguration_friendship(int fold) {
+        public void graphConfiguration_friendship(int fold) {
             lock (Program.locker)
                 Console.WriteLine("Graph(" + egoUserId + " - 1.incl_friendship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
             // Makeup user and tweet nodes and their relations
             addUserNodes();
-            bool isValid = addTweetNodesAndLikeEdges(fold);
-            if (isValid == false)
-                return false;
+            addTweetNodesAndLikeEdges(fold);
 
             // Add friendship links among network users
             addFriendship();
 
             // Print out the graph information
             printGraphInfo();
-            return true;
         }
 
         /// <summary>
         /// Propoased method #2
         /// <para>Include both friendship and followship third party users relations</para>
         /// </summary>
-        public bool graphConfiguration_allFollowship(int fold) {
+        public void graphConfiguration_allFollowship(int fold) {
             lock (Program.locker)
                 Console.WriteLine("Graph(" + egoUserId + " - 2.incl_allFollowship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
             // Makeup user and tweet nodes and their relations
             addUserNodes();
-            bool isValid = addTweetNodesAndLikeEdges(fold);
-            if (isValid == false)
-                return false;
+            addTweetNodesAndLikeEdges(fold);
 
             // Add followship links not only among ego network members but also third party users
             addFriendshipAndFollowship();
 
             // Print out the graph information
             printGraphInfo();
-            return true;
         }
 
         /// <summary>
         /// Propoased method #3
         /// <para>Include authorship relations</para>
         /// </summary>
-        public bool graphConfiguration_authorship(int fold) {
+        public void graphConfiguration_authorship(int fold) {
             lock (Program.locker)
                 Console.WriteLine("Graph(" + egoUserId + " - 3.incl_authorship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
             // Makeup user and tweet nodes and their relations
             addUserNodes();
-            bool isValid = addTweetNodesAndLikeEdges(fold);
-            if (isValid == false)
-                return false;
+            addTweetNodesAndLikeEdges(fold);
 
             // Add friendship links among network users
             addFriendship();
@@ -187,7 +215,6 @@ namespace TweetRecommender {
 
             // Print out the graph information
             printGraphInfo();
-            return true;
         }
 
         public void addUserNodes() {
@@ -203,7 +230,7 @@ namespace TweetRecommender {
             }
         }
 
-        public bool addTweetNodesAndLikeEdges(int fold) {
+        public void addTweetNodesAndLikeEdges(int fold) {
             // Tweets that members like: retweet, quote, favorite
             foreach (long memberId in memberIDs.Keys) {
                 // Node index of given member
@@ -223,17 +250,6 @@ namespace TweetRecommender {
 
                 // If the user is ego user, his like history is divided into training set and test set.
                 if (idxMember == 0) {
-                    // The number of likes of ego user
-                    nLikesOfEgoUser = likes.Count;
-
-                    // The number of tweets the ego user likes should be more than # of folds.
-                    if (likes.Count < nFolds) {
-                        Console.WriteLine("ERROR: The number of like history is less than nFolds.");
-                        Console.WriteLine("\t* # of likes: " + likes.Count);
-                        Console.WriteLine("\t* # of folds: " + nFolds);
-                        return false;
-                    }
-
                     // Split ego user's like history into two
                     var data = splitLikeHistory(likes, fold);
                     foreach (long like in data.Key) {               // Likes except test tweets
@@ -252,8 +268,6 @@ namespace TweetRecommender {
                     }
                 }
             }
-
-            return true;
         }
 
         public void addFriendship() {

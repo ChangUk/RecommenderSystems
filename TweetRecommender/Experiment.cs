@@ -33,8 +33,9 @@ namespace TweetRecommender {
                 int nFolds = p.nFolds;
                 int nIterations = p.nIterations;
 
-                // Get ego user's ID
+                // Get ego user's ID and his like count
                 long egoUser = long.Parse(Path.GetFileNameWithoutExtension(dbFile));
+                int cntLikes = 0;
 
                 // Final result to put the experimental result per fold together
                 var finalResult = new Dictionary<EvaluationMetric, double>();
@@ -48,14 +49,16 @@ namespace TweetRecommender {
                 for (int fold = 0; fold < nFolds; fold++) {
                     // Load graph information from database and then configurate the graph
                     DataLoader loader = new DataLoader(dbFile, nFolds);
-                    bool isValid = loader.graphConfiguration(methodology, fold);
-                    if (isValid == false)
-                        return;
+                    if (fold == 0) {
+                        if (loader.checkEgoNetworkValidation() == false)
+                            return;
+                        cntLikes = loader.cntLikesOfEgoUser;
+                    }
+                    loader.graphConfiguration(methodology, fold);
 
                     // Nodes and edges of graph
                     Dictionary<int, Node> nodes = loader.allNodes;
                     Dictionary<int, List<ForwardLink>> edges = loader.allLinks;
-                    int nLikes = loader.nLikesOfEgoUser;
 
                     // Make a graph structure to run Random Walk with Restart algorithm
                     Graph graph = new Graph(nodes, edges);
@@ -93,7 +96,7 @@ namespace TweetRecommender {
                     foreach (EvaluationMetric metric in metrics) {
                         switch (metric) {
                             case EvaluationMetric.HIT:
-                                logger.Write("\t" + (int)finalResult[metric]); break;
+                                logger.Write("\t" + (int)finalResult[metric] + "\t" + cntLikes); break;
                             case EvaluationMetric.AVGPRECISION:
                                 logger.Write("\t" + (finalResult[metric] / nFolds)); break;
                         }
