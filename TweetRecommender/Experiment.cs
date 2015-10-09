@@ -48,7 +48,9 @@ namespace TweetRecommender {
                 for (int fold = 0; fold < nFolds; fold++) {
                     // Load graph information from database and then configurate the graph
                     DataLoader loader = new DataLoader(dbFile, nFolds);
-                    loader.graphConfiguration(methodology, fold);
+                    bool isValid = loader.graphConfiguration(methodology, fold);
+                    if (isValid == false)
+                        return;
 
                     // Nodes and edges of graph
                     Dictionary<int, Node> nodes = loader.allNodes;
