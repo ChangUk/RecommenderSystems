@@ -8,21 +8,20 @@ namespace TweetRecommender {
 
         public SQLiteAdapter(string dbPath) {
             try {
-                this.conn = new SQLiteConnection("Data Source=" + dbPath + "; Version=3;");
+                SQLiteConnectionStringBuilder connBuilder = new SQLiteConnectionStringBuilder();
+                connBuilder.DataSource = dbPath;
+                connBuilder.Version = 3;
+                connBuilder.JournalMode = SQLiteJournalModeEnum.Wal;
+                this.conn = new SQLiteConnection(connBuilder.ToString());
                 this.conn.Open();
             } catch (Exception e) {
                 throw e;
             }
         }
 
-        public SQLiteAdapter(string pathDir, long egoUserId, int level) {
-            string dbPath = pathDir + egoUserId + "_" + level + ".sqlite";
-            try {
-                this.conn = new SQLiteConnection("Data Source=" + dbPath + "; Version=3;");
-                this.conn.Open();
-            } catch (Exception e) {
-                throw e;
-            }
+        public void closeDB() {
+            if (conn != null)
+                conn.Close();
         }
 
         public HashSet<long> getFollowingUsers(long userId) {
@@ -110,6 +109,19 @@ namespace TweetRecommender {
                 }
             }
             return mentionCounts;
+        }
+
+        public int getMentionCount(long userId1, long userId2) {
+            int mentionCount = 0;
+            using (SQLiteCommand cmd = new SQLiteCommand(conn)) {
+                cmd.CommandText = "SELECT COUNT(*) FROM mention WHERE source = " + userId1 + " AND target = " + userId2;
+                Int64 count = (Int64)cmd.ExecuteScalar();
+                mentionCount += (int)count;
+                cmd.CommandText = "SELECT COUNT(*) FROM mention WHERE source = " + userId2 + " AND target = " + userId1;
+                count = (Int64)cmd.ExecuteScalar();
+                mentionCount += (int)count;
+            }
+            return mentionCount;
         }
     }
 }

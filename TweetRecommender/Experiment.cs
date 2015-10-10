@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 
 namespace TweetRecommender {
-    public enum Methodology { BASELINE, INCL_FRIENDSHIP, INCL_ALLFOLLOWSHIP, INCL_AUTHORSHIP }
+    public enum Methodology { BASELINE, INCL_FRIENDSHIP, INCL_ALLFOLLOWSHIP, INCL_AUTHORSHIP, INCL_MENTIONCOUNT_BINARY, INCL_MENTIONCOUNT }
     public enum EvaluationMetric { HIT, AVGPRECISION }
 
     public struct ThreadParams {

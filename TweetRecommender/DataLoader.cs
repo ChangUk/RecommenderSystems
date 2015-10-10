@@ -71,7 +71,7 @@ namespace TweetRecommender {
             int cntLikes = getLikeCountOfEgoUser();
             int cntFriends = getFriendsCountOfEgoUser();
             if (cntLikes < nFolds || cntLikes < 50 || cntFriends < 50) {
-                Console.WriteLine("ERROR: The number of like history is less than nFolds.");
+                Console.WriteLine("ERROR: The ego network(" + egoUserId + ") is not valid for experiment.");
                 Console.WriteLine("\t* # of likes: " + cntLikes);
                 Console.WriteLine("\t* # of friends: " + cntFriends);
                 Console.WriteLine("\t* # of folds: " + nFolds);
@@ -130,22 +130,27 @@ namespace TweetRecommender {
 
         public void graphConfiguration(Methodology type, int fold) {
             switch (type) {
-                case Methodology.BASELINE:
+                case Methodology.BASELINE:                                  // 0
                     graphConfiguration_baseline(fold); break;
-                case Methodology.INCL_FRIENDSHIP:
+                case Methodology.INCL_FRIENDSHIP:                           // 1
                     graphConfiguration_friendship(fold); break;
-                case Methodology.INCL_ALLFOLLOWSHIP:
+                case Methodology.INCL_ALLFOLLOWSHIP:                        // 2
                     graphConfiguration_allFollowship(fold); break;
-                case Methodology.INCL_AUTHORSHIP:
+                case Methodology.INCL_AUTHORSHIP:                           // 3
                     graphConfiguration_authorship(fold); break;
+                case Methodology.INCL_MENTIONCOUNT_BINARY:                  // 4
+                    graphConfiguration_mentionCount_unary(fold); break;
+                case Methodology.INCL_MENTIONCOUNT:                         // 5
+                    graphConfiguration_mentionCount(fold); break;
             }
+            dbAdapter.closeDB();
         }
 
         /// <summary>
         /// Baseline method
         /// <para>No user friendship</para>
         /// </summary>
-        public void graphConfiguration_baseline(int fold) {
+        private void graphConfiguration_baseline(int fold) {
             lock (Program.locker)
                 Console.WriteLine("Graph(" + egoUserId + " - 0.baseline) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
@@ -161,7 +166,7 @@ namespace TweetRecommender {
         /// Propoased method #1
         /// <para>Include friendship relations</para>
         /// </summary>
-        public void graphConfiguration_friendship(int fold) {
+        private void graphConfiguration_friendship(int fold) {
             lock (Program.locker)
                 Console.WriteLine("Graph(" + egoUserId + " - 1.incl_friendship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
@@ -180,7 +185,7 @@ namespace TweetRecommender {
         /// Propoased method #2
         /// <para>Include both friendship and followship third party users relations</para>
         /// </summary>
-        public void graphConfiguration_allFollowship(int fold) {
+        private void graphConfiguration_allFollowship(int fold) {
             lock (Program.locker)
                 Console.WriteLine("Graph(" + egoUserId + " - 2.incl_allFollowship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
@@ -199,7 +204,7 @@ namespace TweetRecommender {
         /// Propoased method #3
         /// <para>Include authorship relations</para>
         /// </summary>
-        public void graphConfiguration_authorship(int fold) {
+        private void graphConfiguration_authorship(int fold) {
             lock (Program.locker)
                 Console.WriteLine("Graph(" + egoUserId + " - 3.incl_authorship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
 
@@ -212,6 +217,50 @@ namespace TweetRecommender {
 
             // Add authorship of members
             addAuthorship();
+
+            // Print out the graph information
+            printGraphInfo();
+        }
+
+        /// <summary>
+        /// Propoased method #4
+        /// <para>Include mention counts (unary)</para>
+        /// </summary>
+        private void graphConfiguration_mentionCount_unary(int fold) {
+            lock (Program.locker)
+                Console.WriteLine("Graph(" + egoUserId + " - 4.incl_mentionCount_unary) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+
+            // Makeup user and tweet nodes and their relations
+            addUserNodes();
+            addTweetNodesAndLikeEdges(fold);
+
+            // Add friendship links among network users
+            addFriendship();
+
+            // Add mention counts among members
+            addMentionCount(true);
+
+            // Print out the graph information
+            printGraphInfo();
+        }
+
+        /// <summary>
+        /// Propoased method #5
+        /// <para>Include mention counts</para>
+        /// </summary>
+        private void graphConfiguration_mentionCount(int fold) {
+            lock (Program.locker)
+                Console.WriteLine("Graph(" + egoUserId + " - 5.incl_mentionCount) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+
+            // Makeup user and tweet nodes and their relations
+            addUserNodes();
+            addTweetNodesAndLikeEdges(fold);
+
+            // Add friendship links among network users
+            addFriendship();
+
+            // Add mention counts among members
+            addMentionCount(false);
 
             // Print out the graph information
             printGraphInfo();
@@ -340,12 +389,39 @@ namespace TweetRecommender {
         }
 
         public void addMentionCount(bool isUnary) {
-            foreach (long memberId in memberIDs.Keys) {
-                // Node index of given member
-                int idxMember = userIDs[memberId];
+            foreach (long memberId1 in memberIDs.Keys) {
+                // Node index of member 1
+                int idxMember1 = userIDs[memberId1];
 
-                Dictionary<long, int> timeline = dbAdapter.getMentionCounts(memberId);
+                // Mention count on the directed way
+                var mentionCounts = new Dictionary<int, int>();
+                int total = 0;
 
+                foreach (long memberId2 in memberIDs.Keys) {
+                    if (memberId1 == memberId2)
+                        continue;
+
+                    // Node index of member 2
+                    int idxMember2 = userIDs[memberId2];
+
+                    int mentionCount = dbAdapter.getMentionCount(idxMember1, idxMember2);
+                    total += mentionCount;
+                    if (mentionCount > 0)
+                        mentionCounts.Add(idxMember2, mentionCount);
+                }
+
+                // Add link with the weight as much as mention frequency
+                foreach (int id in mentionCounts.Keys) {
+                    if (isUnary) {
+                        addLink(idxMember1, id, EdgeType.MENTION, 1);
+                        addLink(id, idxMember1, EdgeType.MENTION, 1);
+                    } else {
+                        // Log scaling to reduce its effectiveness
+                        double weight = Math.Log(mentionCounts[id]) / Math.Log(total);
+                        addLink(idxMember1, id, EdgeType.MENTION, weight);
+                        addLink(id, idxMember1, EdgeType.MENTION, weight);
+                    }
+                }
             }
         }
 
