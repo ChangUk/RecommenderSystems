@@ -20,19 +20,31 @@ namespace TweetRecommender {
             Console.WriteLine("RWR-based Recommendation (" + DateTime.Now.ToString() + ")\n");
             Stopwatch stopwatch = Stopwatch.StartNew();
 
+            // Program arguments
             dirData = @args[0] + Path.DirectorySeparatorChar;           // Path of directory that containes SQLite DB files
-            Methodology methodology = (Methodology)int.Parse(args[1]);  // Graph configuration methodology (ex. 0: baseline)
-            int nFolds = int.Parse(args[2]);                            // Number of folds
-            int nIterations = int.Parse(args[3]);                       // Number of iterations for RWR
+            int nFolds = int.Parse(args[1]);                            // Number of folds
+            int nIterations = int.Parse(args[2]);                       // Number of iterations for RWR
 
             // Run experiments using multi-threading
             string[] sqliteDBs = Directory.GetFiles(dirData, "*.sqlite");
             List<Thread> threadList = new List<Thread>();
+
+            // Methodology list
+            List<Methodology> methodologies = new List<Methodology>();
+            methodologies.Add(Methodology.BASELINE);
+            methodologies.Add(Methodology.INCL_FRIENDSHIP);
+            methodologies.Add(Methodology.ALL);
+            methodologies.Add(Methodology.EXCL_FOLLOWSHIP);
+            methodologies.Add(Methodology.EXCL_AUTHORSHIP);
+            methodologies.Add(Methodology.EXCL_MENTIONCOUNT);
+
             foreach (string dbFile in sqliteDBs) {
-                Thread thread = new Thread(new ParameterizedThreadStart(Experiment.runKFoldCrossValidation));
-                ThreadParams parameters = new ThreadParams(dbFile, methodology, nFolds, nIterations);
-                thread.Start(parameters);
-                threadList.Add(thread);
+                foreach (Methodology m in methodologies) {
+                    Thread thread = new Thread(new ParameterizedThreadStart(Experiment.runKFoldCrossValidation));
+                    ThreadParams parameters = new ThreadParams(dbFile, m, nFolds, nIterations);
+                    thread.Start(parameters);
+                    threadList.Add(thread);
+                }
             }
 
             foreach (Thread thread in threadList)

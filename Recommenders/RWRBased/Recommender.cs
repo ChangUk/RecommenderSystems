@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace Recommenders.RWRBased {
     public enum NodeType { UNDEFINED, USER, ITEM, ETC }
@@ -16,6 +12,7 @@ namespace Recommenders.RWRBased {
         }
 
         public List<KeyValuePair<long, double>> Recommendation(int idxTargetUser, float dampingFactor, int nIteration) {
+            // Run Random Walk with Restart
             Model model = new Model(graph, dampingFactor, idxTargetUser);
             model.run(nIteration);
 
@@ -33,9 +30,12 @@ namespace Recommenders.RWRBased {
                     recommendation.Add(new KeyValuePair<long, double>(graph.nodes[i].id, model.rank[i]));
             }
 
-            // Sort the candidate items
-            recommendation.Sort((one, another) => { return one.Value.CompareTo(another.Value); });
-            recommendation.Reverse();
+            // Sort the candidate items (descending order)
+            // Order by rank first, then by item id(time order; the latest one the higher order)
+            recommendation.Sort((one, another) => {
+                int result = one.Value.CompareTo(another.Value) * -1;
+                return result != 0 ? result : one.Key.CompareTo(another.Key) * -1;
+            });
             return recommendation;
         }
 

@@ -4,7 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 
 namespace TweetRecommender {
-    public enum Methodology { BASELINE, INCL_FRIENDSHIP, INCL_ALLFOLLOWSHIP, INCL_AUTHORSHIP, INCL_MENTIONCOUNT_BINARY, INCL_MENTIONCOUNT }
+    public enum Methodology { BASELINE, INCL_FRIENDSHIP, INCL_ALLFOLLOWSHIP, INCL_AUTHORSHIP, INCL_MENTIONCOUNT, ALL,
+        EXCL_FOLLOWSHIP, EXCL_AUTHORSHIP, EXCL_MENTIONCOUNT }
     public enum EvaluationMetric { HIT, AVGPRECISION }
 
     public struct ThreadParams {
@@ -67,6 +68,15 @@ namespace TweetRecommender {
                     // Get recommendation list
                     Recommender recommender = new Recommender(graph);
                     var recommendation = recommender.Recommendation(0, 0.15f, nIterations);
+
+                    //// temp
+                    //lock (Program.locker) {
+                    //    StreamWriter logger = new StreamWriter(Program.dirData + "rank.dat", true);
+                    //    logger.WriteLine(methodology);
+                    //    for (int i = 0; i < recommendation.Count; i++)
+                    //        logger.WriteLine(recommendation[i].Key + ":\t" + recommendation[i].Value);
+                    //    logger.Close();
+                    //}
 
                     // Get evaluation result
                     int nHits = 0;
