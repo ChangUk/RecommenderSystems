@@ -45,7 +45,7 @@ namespace Recommenders.RWRBased {
                 nextRank[i] = 0;
 
                 // Make restart weight
-                restart[i] = (i == targetNode) ? nNodes : 0;
+                restart[i] = (i == targetNode) ? 1 : 0;
             }
         }
 
