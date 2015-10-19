@@ -22,11 +22,11 @@ namespace Recommenders.RWRBased {
 
             for (int i = 0; i < nNodes; i++) {
                 // Initialize rank score of each node
-                rank[i] = 1;
+                rank[i] = 1d;
                 nextRank[i] = 0;
 
                 // Make restart weight
-                restart[i] = 1;
+                restart[i] = 1d / nNodes;
             }
         }
 
@@ -45,7 +45,7 @@ namespace Recommenders.RWRBased {
                 nextRank[i] = 0;
 
                 // Make restart weight
-                restart[i] = (i == targetNode) ? 1 : 0;
+                restart[i] = (i == targetNode) ? 1d : 0;
             }
         }
 
