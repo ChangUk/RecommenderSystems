@@ -34,8 +34,8 @@ namespace TweetRecommender {
             methodologies.Add(Methodology.BASELINE);
             methodologies.Add(Methodology.INCL_FRIENDSHIP);
             methodologies.Add(Methodology.ALL);
-            methodologies.Add(Methodology.EXCL_FOLLOWSHIP);
             methodologies.Add(Methodology.EXCL_AUTHORSHIP);
+            methodologies.Add(Methodology.EXCL_FOLLOWSHIP_ON_THIRDPARTY);
             methodologies.Add(Methodology.EXCL_MENTIONCOUNT);
 
             foreach (string dbFile in sqliteDBs) {

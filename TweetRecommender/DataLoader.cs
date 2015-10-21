@@ -80,10 +80,12 @@ namespace TweetRecommender {
             int cntLikes = getLikeCountOfEgoUser();
             int cntFriends = getFriendsCountOfEgoUser();
             if (cntLikes < nFolds || cntLikes < 50 || cntFriends < 50) {
-                Console.WriteLine("ERROR: The ego network(" + egoUserId + ") is not valid for experiment.");
-                Console.WriteLine("\t* # of likes: " + cntLikes);
-                Console.WriteLine("\t* # of friends: " + cntFriends);
-                Console.WriteLine("\t* # of folds: " + nFolds);
+                lock (Program.locker) {
+                    Console.WriteLine("ERROR: The ego network(" + egoUserId + ") is not valid for experiment.");
+                    Console.WriteLine("\t* # of likes: " + cntLikes);
+                    Console.WriteLine("\t* # of friends: " + cntFriends);
+                    Console.WriteLine("\t* # of folds: " + nFolds);
+                }
                 return false;
             }
             return true;
@@ -138,217 +140,99 @@ namespace TweetRecommender {
         }
 
         public void graphConfiguration(Methodology type, int fold) {
+            List<Feature> features = new List<Feature>();
             switch (type) {
-                case Methodology.BASELINE:                                  // 0
-                    graphConfiguration_baseline(fold); break;
-                case Methodology.INCL_FRIENDSHIP:                           // 1
-                    graphConfiguration_friendship(fold); break;
-                case Methodology.INCL_ALLFOLLOWSHIP:                        // 2
-                    graphConfiguration_allFollowship(fold); break;
-                case Methodology.INCL_AUTHORSHIP:                           // 3
-                    graphConfiguration_authorship(fold); break;
-                case Methodology.INCL_MENTIONCOUNT:                         // 4
-                    graphConfiguration_mentionCount(fold); break;
-                case Methodology.ALL:                                       // 5
-                    graphConfiguration_all(fold); break;
-                case Methodology.EXCL_FOLLOWSHIP:                           // 6
-                    graphConfiguration_all_exclFollowship(fold); break;
-                case Methodology.EXCL_AUTHORSHIP:                           // 7
-                    graphConfiguration_all_exclAuthorship(fold); break;
-                case Methodology.EXCL_MENTIONCOUNT:                         // 8
-                    graphConfiguration_all_exclMentionCount(fold); break;
-
+                case Methodology.BASELINE:                          // 0
+                    break;
+                case Methodology.INCL_FRIENDSHIP:                   // 1
+                    features.Add(Feature.FRIENDSHIP);
+                    break;
+                case Methodology.INCL_FOLLOWSHIP_ON_THIRDPARTY:     // 2
+                    features.Add(Feature.FOLLOWSHIP_ON_THIRDPARTY);
+                    break;
+                case Methodology.INCL_AUTHORSHIP:                   // 3
+                    features.Add(Feature.AUTHORSHIP);
+                    break;
+                case Methodology.INCL_MENTIONCOUNT:                 // 4
+                    features.Add(Feature.MENTIONCOUNT);
+                    break;
+                case Methodology.INCL_ALLFOLLOWSHIP:                // 5
+                    features.Add(Feature.FRIENDSHIP);
+                    features.Add(Feature.FOLLOWSHIP_ON_THIRDPARTY);
+                    break;
+                case Methodology.INCL_FRIENDSHIP_AUTHORSHIP:        // 6
+                    features.Add(Feature.FRIENDSHIP);
+                    features.Add(Feature.AUTHORSHIP);
+                    break;
+                case Methodology.INCL_FRIENDSHIP_MENTIONCOUNT:      // 7
+                    features.Add(Feature.FRIENDSHIP);
+                    features.Add(Feature.MENTIONCOUNT);
+                    break;
+                case Methodology.ALL:                               // 8
+                    features.Add(Feature.FRIENDSHIP);
+                    features.Add(Feature.FOLLOWSHIP_ON_THIRDPARTY);
+                    features.Add(Feature.AUTHORSHIP);
+                    features.Add(Feature.MENTIONCOUNT);
+                    break;
+                case Methodology.EXCL_FRIENDSHIP:                   // 9
+                    features.Add(Feature.FOLLOWSHIP_ON_THIRDPARTY);
+                    features.Add(Feature.AUTHORSHIP);
+                    features.Add(Feature.MENTIONCOUNT);
+                    break;
+                case Methodology.EXCL_FOLLOWSHIP_ON_THIRDPARTY:     // 10
+                    features.Add(Feature.FRIENDSHIP);
+                    features.Add(Feature.AUTHORSHIP);
+                    features.Add(Feature.MENTIONCOUNT);
+                    break;
+                case Methodology.EXCL_AUTHORSHIP:                   // 11
+                    features.Add(Feature.FRIENDSHIP);
+                    features.Add(Feature.FOLLOWSHIP_ON_THIRDPARTY);
+                    features.Add(Feature.MENTIONCOUNT);
+                    break;
+                case Methodology.EXCL_MENTIONCOUNT:                 // 12
+                    features.Add(Feature.FRIENDSHIP);
+                    features.Add(Feature.FOLLOWSHIP_ON_THIRDPARTY);
+                    features.Add(Feature.AUTHORSHIP);
+                    break;
             }
+
+            // Run graph configuration
+            graphConfiguration(features, fold);
+
+            // Close database connection
             dbAdapter.closeDB();
         }
 
-        /// <summary>
-        /// Baseline method
-        /// <para>No user friendship</para>
-        /// </summary>
-        private void graphConfiguration_baseline(int fold) {
-            lock (Program.locker)
-                Console.WriteLine("Graph(" + egoUserId + " - 0.baseline) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
+        public void graphConfiguration(List<Feature> features, int fold) {
+            lock (Program.locker) {
+                Console.Write("Graph Configuration(" + egoUserId + ": Fold #" + (fold + 1) + "/" + nFolds + ") - ");
+                foreach (Feature feature in features)
+                    Console.Write(feature + " ");
+                Console.WriteLine();
+            }
 
             // Makeup user and tweet nodes and their relations
             addMemberNodes();
             addTweetNodesAndLikeEdges(fold);
 
-            // Print out the graph information
-            printGraphInfo();
-        }
-
-        /// <summary>
-        /// Propoased method #1
-        /// <para>Include friendship relations</para>
-        /// </summary>
-        private void graphConfiguration_friendship(int fold) {
-            lock (Program.locker)
-                Console.WriteLine("Graph(" + egoUserId + " - 1.incl_friendship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
-
-            // Makeup user and tweet nodes and their relations
-            addMemberNodes();
-            addTweetNodesAndLikeEdges(fold);
-
-            // Add friendship links among network users
-            addFriendship();
-
-            // Print out the graph information
-            printGraphInfo();
-        }
-
-        /// <summary>
-        /// Propoased method #2
-        /// <para>Include both friendship and followship third party users relations</para>
-        /// </summary>
-        private void graphConfiguration_allFollowship(int fold) {
-            lock (Program.locker)
-                Console.WriteLine("Graph(" + egoUserId + " - 2.incl_allFollowship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
-
-            // Makeup user and tweet nodes and their relations
-            addMemberNodes();
-            addTweetNodesAndLikeEdges(fold);
-
-            // Add followship links not only among ego network members but also third party users
-            addFriendshipAndFollowship();
-
-            // Print out the graph information
-            printGraphInfo();
-        }
-
-        /// <summary>
-        /// Propoased method #3
-        /// <para>Include authorship relations</para>
-        /// </summary>
-        private void graphConfiguration_authorship(int fold) {
-            lock (Program.locker)
-                Console.WriteLine("Graph(" + egoUserId + " - 3.incl_authorship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
-
-            // Makeup user and tweet nodes and their relations
-            addMemberNodes();
-            addTweetNodesAndLikeEdges(fold);
-
-            // Add friendship links among network users
-            addFriendship();
+            // Add link between users
+            if (features.Contains(Feature.FRIENDSHIP)) {
+                if (features.Contains(Feature.FOLLOWSHIP_ON_THIRDPARTY))
+                    addAllFollowship();
+                else
+                    addFriendship();
+            } else {
+                if (features.Contains(Feature.FOLLOWSHIP_ON_THIRDPARTY))
+                    addFollowshipOnThirdParty();
+            }
 
             // Add authorship of members
-            addAuthorship();
-
-            // Print out the graph information
-            printGraphInfo();
-        }
-
-        /// <summary>
-        /// Propoased method #4
-        /// <para>Include mention counts</para>
-        /// </summary>
-        private void graphConfiguration_mentionCount(int fold) {
-            lock (Program.locker)
-                Console.WriteLine("Graph(" + egoUserId + " - 4.incl_mentionCount) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
-
-            // Makeup user and tweet nodes and their relations
-            addMemberNodes();
-            addTweetNodesAndLikeEdges(fold);
-
-            // Add friendship links among network users
-            addFriendship();
+            if (features.Contains(Feature.AUTHORSHIP))
+                addAuthorship();
 
             // Add mention counts among members
-            addMentionCount();
-
-            // Print out the graph information
-            printGraphInfo();
-        }
-
-        /// <summary>
-        /// Propoased method #5
-        /// <para>Use all features</para>
-        /// </summary>
-        private void graphConfiguration_all(int fold) {
-            lock (Program.locker)
-                Console.WriteLine("Graph(" + egoUserId + " - 5.all features) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
-
-            // Makeup user and tweet nodes and their relations
-            addMemberNodes();
-            addTweetNodesAndLikeEdges(fold);
-
-            // Add followship links not only among ego network members but also third party users
-            addFriendshipAndFollowship();
-
-            // Add authorship of members
-            addAuthorship();
-
-            // Add mention counts among members
-            addMentionCount();
-
-            // Print out the graph information
-            printGraphInfo();
-        }
-
-        /// <summary>
-        /// Propoased method #6
-        /// <para>Use all features without followship on third party</para>
-        /// </summary>
-        private void graphConfiguration_all_exclFollowship(int fold) {
-            lock (Program.locker)
-                Console.WriteLine("Graph(" + egoUserId + " - 6.all features excluding followship on third party) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
-
-            // Makeup user and tweet nodes and their relations
-            addMemberNodes();
-            addTweetNodesAndLikeEdges(fold);
-
-            // Add friendship links among network users
-            addFriendship();
-
-            // Add authorship of members
-            addAuthorship();
-
-            // Add mention counts among members
-            addMentionCount();
-
-            // Print out the graph information
-            printGraphInfo();
-        }
-
-        /// <summary>
-        /// Propoased method #7
-        /// <para>Use all features without authorship</para>
-        /// </summary>
-        private void graphConfiguration_all_exclAuthorship(int fold) {
-            lock (Program.locker)
-                Console.WriteLine("Graph(" + egoUserId + " - 7.all features excluding authorship) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
-
-            // Makeup user and tweet nodes and their relations
-            addMemberNodes();
-            addTweetNodesAndLikeEdges(fold);
-
-            // Add followship links not only among ego network members but also third party users
-            addFriendshipAndFollowship();
-
-            // Add mention counts among members
-            addMentionCount();
-
-            // Print out the graph information
-            printGraphInfo();
-        }
-
-        /// <summary>
-        /// Propoased method #8
-        /// <para>Use all features without mention count</para>
-        /// </summary>
-        private void graphConfiguration_all_exclMentionCount(int fold) {
-            lock (Program.locker)
-                Console.WriteLine("Graph(" + egoUserId + " - 8.all features excluding mention count) Configuration... Fold #" + (fold + 1) + "/" + nFolds);
-
-            // Makeup user and tweet nodes and their relations
-            addMemberNodes();
-            addTweetNodesAndLikeEdges(fold);
-
-            // Add followship links not only among ego network members but also third party users
-            addFriendshipAndFollowship();
-
-            // Add authorship of members
-            addAuthorship();
+            if (features.Contains(Feature.MENTIONCOUNT))
+                addMentionCount2();
 
             // Print out the graph information
             printGraphInfo();
@@ -408,14 +292,18 @@ namespace TweetRecommender {
         }
 
         public void addFriendship() {
-            addFollowship(false);
+            addFollowship(true, false);
         }
 
-        public void addFriendshipAndFollowship() {
-            addFollowship(true);
+        public void addFollowshipOnThirdParty() {
+            addFollowship(false, true);
         }
 
-        public void addFollowship(bool inclThirdParty) {
+        public void addAllFollowship() {
+            addFollowship(true, true);
+        }
+
+        public void addFollowship(bool inclFriendShip, bool inclFollowshipOnThirdparty) {
             foreach (long memberId in memberIDs.Keys) {
                 // Node index of given member
                 int idxMember = userIDs[memberId];
@@ -423,11 +311,13 @@ namespace TweetRecommender {
                 HashSet<long> followees = dbAdapter.getFollowingUsers(memberId);
                 foreach (long followee in followees) {
                     if (memberIDs.ContainsKey(followee)) {
-                        // Add links between members; the member nodes are already included in graph
-                        addLink(idxMember, userIDs[followee], EdgeType.FRIENDSHIP, 1);
-                        addLink(userIDs[followee], idxMember, EdgeType.FRIENDSHIP, 1);
+                        if (inclFriendShip) {
+                            // Add links between members; the member nodes are already included in graph
+                            addLink(idxMember, userIDs[followee], EdgeType.FRIENDSHIP, 1);
+                            addLink(userIDs[followee], idxMember, EdgeType.FRIENDSHIP, 1);
+                        }
                     } else {
-                        if (inclThirdParty == true) {
+                        if (inclFollowshipOnThirdparty) {
                             // Add third part user
                             addUserNode(followee, NodeType.ETC);
 
@@ -435,25 +325,6 @@ namespace TweetRecommender {
                             addLink(idxMember, userIDs[followee], EdgeType.FOLLOW, 1);
                             addLink(userIDs[followee], idxMember, EdgeType.FOLLOW, 1);
                         }
-                    }
-                }
-            }
-        }
-
-        public void addThirdPartyFollowship() {
-            foreach (long memberId in memberIDs.Keys) {
-                // Node index of given member
-                int idxMember = userIDs[memberId];
-                
-                HashSet<long> followees = dbAdapter.getFollowingUsers(memberId);
-                foreach (long followee in followees) {
-                    if (!memberIDs.ContainsKey(followee)) {
-                        // Add third part user
-                        addUserNode(followee, NodeType.ETC);
-
-                        // Add links between member and third party user
-                        addLink(idxMember, userIDs[followee], EdgeType.FOLLOW, 1);
-                        addLink(userIDs[followee], idxMember, EdgeType.FOLLOW, 1);
                     }
                 }
             }
@@ -487,22 +358,24 @@ namespace TweetRecommender {
 
                 // Get mention count
                 var mentionCounts = new Dictionary<int, int>();
-                double sumMentionCount = 0;
+                int sumMentionCount = 0;
                 foreach (long memberId2 in memberIDs.Keys) {
                     if (memberId1 == memberId2)
                         continue;
 
                     int mentionCount = dbAdapter.getMentionCount(memberId1, memberId2);
-                    if (mentionCount > 0) {
+                    if (mentionCount > 1) {
                         mentionCounts.Add(userIDs[memberId2], mentionCount);
                         sumMentionCount += mentionCount;
                     }
                 }
 
                 // Add link with the weight as much as mention frequency
-                foreach (int idxTarget in mentionCounts.Keys) {
-                    double weight = Math.Log(mentionCounts[idxTarget]) / Math.Log(sumMentionCount);
-                    addLink(idxMember, idxTarget, EdgeType.MENTION, weight);
+                if (sumMentionCount > 1) {
+                    foreach (int idxTarget in mentionCounts.Keys) {
+                        double weight = Math.Log(mentionCounts[idxTarget]) / Math.Log(sumMentionCount);
+                        addLink(idxMember, idxTarget, EdgeType.MENTION, weight);
+                    }
                 }
             }
         }
@@ -524,7 +397,7 @@ namespace TweetRecommender {
                         continue;
 
                     int mentionCount = dbAdapter.getMentionCount(memberId1, memberId2);
-                    if (mentionCount > 0) {
+                    if (mentionCount > 1) {
                         mentionCounts.Add(userIDs[memberId2], mentionCount);
                         sumLogMentionCount += Math.Log(mentionCount);
                     }
@@ -538,9 +411,11 @@ namespace TweetRecommender {
                 }
 
                 // Add link with the weight as much as mention frequency
-                foreach (int idx in mentionCounts.Keys) {
-                    double weight = nFriendhips * Math.Log(mentionCounts[idx]) / sumLogMentionCount;
-                    addLink(idxMember, idx, EdgeType.MENTION, weight);
+                if (sumLogMentionCount > 1) {
+                    foreach (int idx in mentionCounts.Keys) {
+                        double weight = nFriendhips * Math.Log(mentionCounts[idx]) / sumLogMentionCount;
+                        addLink(idxMember, idx, EdgeType.MENTION, weight);
+                    }
                 }
             }
         }
