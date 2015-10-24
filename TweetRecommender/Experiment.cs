@@ -40,6 +40,10 @@ namespace TweetRecommender {
                 int nFolds = p.nFolds;
                 int nIterations = p.nIterations;
 
+                // Check if the DB file exists
+                if (!File.Exists(dbFile))
+                    throw new FileNotFoundException(dbFile);
+
                 // Get ego user's ID and his like count
                 long egoUser = long.Parse(Path.GetFileNameWithoutExtension(dbFile));
                 int cntLikes = 0;
@@ -120,6 +124,8 @@ namespace TweetRecommender {
                     logger.WriteLine();
                     logger.Close();
                 }
+            } catch (FileNotFoundException e) {
+                Console.WriteLine(e);
             } finally {
                 Program.semaphore.Release();
             }
