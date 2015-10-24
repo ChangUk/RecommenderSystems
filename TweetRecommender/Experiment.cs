@@ -16,13 +16,11 @@ namespace TweetRecommender {
 
     public struct ThreadParams {
         public string dbFile;
-        public Methodology methodology;
         public int nFolds;
         public int nIterations;
 
-        public ThreadParams(string dbFile, Methodology methodology, int nFolds, int nIterations) {
+        public ThreadParams(string dbFile, int nFolds, int nIterations) {
             this.dbFile = dbFile;
-            this.methodology = methodology;
             this.nFolds = nFolds;
             this.nIterations = nIterations;
         }
@@ -36,7 +34,6 @@ namespace TweetRecommender {
                 // Setting environment for experiments
                 ThreadParams p = (ThreadParams)parameters;
                 string dbFile = p.dbFile;
-                Methodology methodology = p.methodology;
                 int nFolds = p.nFolds;
                 int nIterations = p.nIterations;
 
@@ -44,85 +41,88 @@ namespace TweetRecommender {
                 if (!File.Exists(dbFile))
                     throw new FileNotFoundException(dbFile);
 
-                // Get ego user's ID and his like count
-                long egoUser = long.Parse(Path.GetFileNameWithoutExtension(dbFile));
-                int cntLikes = 0;
+                // Do experiments for each methodology
+                foreach (Methodology methodology in Program.methodologies) {
+                    // Get ego user's ID and his like count
+                    long egoUser = long.Parse(Path.GetFileNameWithoutExtension(dbFile));
+                    int cntLikes = 0;
 
-                // Final result to put the experimental result per fold together
-                var finalResult = new Dictionary<EvaluationMetric, double>();
-                foreach (EvaluationMetric metric in Enum.GetValues(typeof(EvaluationMetric)))
-                    finalResult.Add(metric, 0d);
+                    // Final result to put the experimental result per fold together
+                    var finalResult = new Dictionary<EvaluationMetric, double>();
+                    foreach (EvaluationMetric metric in Enum.GetValues(typeof(EvaluationMetric)))
+                        finalResult.Add(metric, 0d);
 
-                // Need to avoid the following error: "Collection was modified; enumeration operation may not execute"
-                List<EvaluationMetric> metrics = new List<EvaluationMetric>(finalResult.Keys);
+                    // Need to avoid the following error: "Collection was modified; enumeration operation may not execute"
+                    List<EvaluationMetric> metrics = new List<EvaluationMetric>(finalResult.Keys);
 
-                // K-Fold Cross Validation
-                for (int fold = 0; fold < nFolds; fold++) {
-                    // Load graph information from database and then configurate the graph
-                    DataLoader loader = new DataLoader(dbFile, nFolds);
-                    if (fold == 0) {
-                        if (loader.checkEgoNetworkValidation() == false)
-                            return;
-                        cntLikes = loader.cntLikesOfEgoUser;
-                    }
-                    loader.graphConfiguration(methodology, fold);
+                    // K-Fold Cross Validation
+                    for (int fold = 0; fold < nFolds; fold++) {
+                        // Load graph information from database and then configurate the graph
+                        DataLoader loader = new DataLoader(dbFile, nFolds);
+                        if (fold == 0) {
+                            if (loader.checkEgoNetworkValidation() == false)
+                                return;
+                            cntLikes = loader.cntLikesOfEgoUser;
+                        }
+                        loader.graphConfiguration(methodology, fold);
 
-                    // Nodes and edges of graph
-                    Dictionary<int, Node> nodes = loader.allNodes;
-                    Dictionary<int, List<ForwardLink>> edges = loader.allLinks;
+                        // Nodes and edges of graph
+                        Dictionary<int, Node> nodes = loader.allNodes;
+                        Dictionary<int, List<ForwardLink>> edges = loader.allLinks;
 
-                    // Make a graph structure to run Random Walk with Restart algorithm
-                    Graph graph = new Graph(nodes, edges);
-                    graph.buildGraph();
+                        // Make a graph structure to run Random Walk with Restart algorithm
+                        Graph graph = new Graph(nodes, edges);
+                        graph.buildGraph();
 
-                    // Get recommendation list
-                    Recommender recommender = new Recommender(graph);
-                    var recommendation = recommender.Recommendation(0, 0.15f, nIterations);
+                        // Get recommendation list
+                        Recommender recommender = new Recommender(graph);
+                        var recommendation = recommender.Recommendation(0, 0.15f, nIterations);
 
-                    //// temp
-                    //lock (Program.locker) {
-                    //    StreamWriter logger = new StreamWriter(Program.dirData + "rank.dat", true);
-                    //    logger.WriteLine(methodology);
-                    //    for (int i = 0; i < recommendation.Count; i++)
-                    //        logger.WriteLine(recommendation[i].Key + ":\t" + recommendation[i].Value);
-                    //    logger.Close();
-                    //}
+                        //// temp
+                        //lock (Program.locker) {
+                        //    StreamWriter logger = new StreamWriter(Program.dirData + "rank.dat", true);
+                        //    logger.WriteLine(methodology);
+                        //    for (int i = 0; i < recommendation.Count; i++)
+                        //        logger.WriteLine(recommendation[i].Key + ":\t" + recommendation[i].Value);
+                        //    logger.Close();
+                        //}
 
-                    // Get evaluation result
-                    int nHits = 0;
-                    double sumPrecision = 0;
-                    for (int i = 0; i < recommendation.Count; i++) {
-                        if (loader.testSet.Contains(recommendation[i].Key)) {
-                            nHits += 1;
-                            sumPrecision += (double)nHits / (i + 1);
+                        // Get evaluation result
+                        int nHits = 0;
+                        double sumPrecision = 0;
+                        for (int i = 0; i < recommendation.Count; i++) {
+                            if (loader.testSet.Contains(recommendation[i].Key)) {
+                                nHits += 1;
+                                sumPrecision += (double)nHits / (i + 1);
+                            }
+                        }
+
+                        // Add current result to final one
+                        foreach (EvaluationMetric metric in metrics) {
+                            switch (metric) {
+                                case EvaluationMetric.HIT:
+                                    finalResult[metric] += nHits; break;
+                                case EvaluationMetric.AVGPRECISION:
+                                    finalResult[metric] += (nHits == 0) ? 0 : sumPrecision / nHits; break;
+                            }
                         }
                     }
 
-                    // Add current result to final one
-                    foreach (EvaluationMetric metric in metrics) {
-                        switch (metric) {
-                            case EvaluationMetric.HIT:
-                                finalResult[metric] += nHits; break;
-                            case EvaluationMetric.AVGPRECISION:
-                                finalResult[metric] += (nHits == 0) ? 0 : sumPrecision / nHits; break;
+                    lock (Program.locker) {
+                        // Write the result of this ego network to file
+                        StreamWriter logger = new StreamWriter(Program.dirData + "result.dat", true);
+                        logger.Write(egoUser + "\t" + (int)methodology + "\t" + nFolds + "\t" + nIterations);
+                        foreach (EvaluationMetric metric in metrics) {
+                            switch (metric) {
+                                case EvaluationMetric.HIT:
+                                    logger.Write("\t" + (int)finalResult[metric] + "\t" + cntLikes); break;
+                                case EvaluationMetric.AVGPRECISION:
+                                    logger.Write("\t" + (finalResult[metric] / nFolds)); break;
+                            }
                         }
+                        logger.WriteLine();
+                        logger.Close();
                     }
-                }
-
-                lock (Program.locker) {
-                    // Write the result of this ego network to file
-                    StreamWriter logger = new StreamWriter(Program.dirData + "result.dat", true);
-                    logger.Write(egoUser + "\t" + (int)methodology + "\t" + nFolds + "\t" + nIterations);
-                    foreach (EvaluationMetric metric in metrics) {
-                        switch (metric) {
-                            case EvaluationMetric.HIT:
-                                logger.Write("\t" + (int)finalResult[metric] + "\t" + cntLikes); break;
-                            case EvaluationMetric.AVGPRECISION:
-                                logger.Write("\t" + (finalResult[metric] / nFolds)); break;
-                        }
-                    }
-                    logger.WriteLine();
-                    logger.Close();
                 }
             } catch (FileNotFoundException e) {
                 Console.WriteLine(e);

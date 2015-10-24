@@ -8,13 +8,16 @@ using System.Threading;
 namespace TweetRecommender {
     public class Program {
         // To limit the number of multithreading concurrency
-        public static Semaphore semaphore = new Semaphore(10, 10);
+        public static Semaphore semaphore = new Semaphore(2, 2);
 
         // To avoid file writer collision
         public static Object locker = new Object();
 
         // Path of directory that contains data files (*.sqlite)
         public static string dirData;
+
+        // Methodologies
+        public static List<Methodology> methodologies;
 
         public static void Main(string[] args) {
             Console.WriteLine("RWR-based Recommendation (" + DateTime.Now.ToString() + ")\n");
@@ -30,7 +33,7 @@ namespace TweetRecommender {
             List<Thread> threadList = new List<Thread>();
 
             // Methodology list
-            List<Methodology> methodologies = new List<Methodology>();
+            methodologies = new List<Methodology>();
             methodologies.Add(Methodology.BASELINE);
             methodologies.Add(Methodology.INCL_FRIENDSHIP);
             methodologies.Add(Methodology.ALL);
@@ -39,12 +42,10 @@ namespace TweetRecommender {
             methodologies.Add(Methodology.EXCL_MENTIONCOUNT);
 
             foreach (string dbFile in sqliteDBs) {
-                foreach (Methodology m in methodologies) {
-                    Thread thread = new Thread(new ParameterizedThreadStart(Experiment.runKFoldCrossValidation));
-                    ThreadParams parameters = new ThreadParams(dbFile, m, nFolds, nIterations);
-                    thread.Start(parameters);
-                    threadList.Add(thread);
-                }
+                Thread thread = new Thread(new ParameterizedThreadStart(Experiment.runKFoldCrossValidation));
+                ThreadParams parameters = new ThreadParams(dbFile, nFolds, nIterations);
+                thread.Start(parameters);
+                threadList.Add(thread);
             }
 
             foreach (Thread thread in threadList)
