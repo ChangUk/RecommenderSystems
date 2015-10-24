@@ -19,6 +19,9 @@ namespace TweetRecommender {
         // Methodologies
         public static List<Methodology> methodologies;
 
+        // Existing experimental result
+        public static Dictionary<long, List<int>> existingResults;
+
         public static void Main(string[] args) {
             Console.WriteLine("RWR-based Recommendation (" + DateTime.Now.ToString() + ")\n");
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -27,6 +30,23 @@ namespace TweetRecommender {
             dirData = @args[0] + Path.DirectorySeparatorChar;           // Path of directory that containes SQLite DB files
             int nFolds = int.Parse(args[1]);                            // Number of folds
             int nIterations = int.Parse(args[2]);                       // Number of iterations for RWR
+
+            // Load existing experimental results
+            if (File.Exists(dirData + "result.dat")) {
+                existingResults = new Dictionary<long, List<int>>();
+                StreamReader reader = new StreamReader(dirData + "result.dat");
+                string line;
+                while ((line = reader.ReadLine()) != null) {
+                    string[] tokens = line.Split('\t');
+                    if (tokens.Length != 7)
+                        continue;
+                    long egouser = long.Parse(tokens[0]);
+                    int experiment = int.Parse(tokens[1]);
+                    if (!existingResults.ContainsKey(egouser))
+                        existingResults.Add(egouser, new List<int>());
+                    existingResults[egouser].Add(experiment);
+                }
+            }
 
             // Run experiments using multi-threading
             string[] sqliteDBs = Directory.GetFiles(dirData, "*.sqlite");

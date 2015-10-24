@@ -47,6 +47,15 @@ namespace TweetRecommender {
                     long egoUser = long.Parse(Path.GetFileNameWithoutExtension(dbFile));
                     int cntLikes = 0;
 
+                    // Check if this experiment has ever been performed earlier
+                    int m = (int)methodology;
+                    if (Program.existingResults.ContainsKey(egoUser) && Program.existingResults[egoUser].Contains(m)) {
+                        lock (Program.locker) {
+                            Console.WriteLine("Ego network(" + egoUser + "): done on experiment #" + m);
+                        }
+                        continue;
+                    }
+
                     // Final result to put the experimental result per fold together
                     var finalResult = new Dictionary<EvaluationMetric, double>();
                     foreach (EvaluationMetric metric in Enum.GetValues(typeof(EvaluationMetric)))
