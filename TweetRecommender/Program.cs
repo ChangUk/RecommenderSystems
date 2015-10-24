@@ -8,7 +8,7 @@ using System.Threading;
 namespace TweetRecommender {
     public class Program {
         // To limit the number of multithreading concurrency
-        public static Semaphore semaphore = new Semaphore(2, 2);
+        public static Semaphore semaphore = new Semaphore(10, 10);
 
         // To avoid file writer collision
         public static Object locker = new Object();
