@@ -20,7 +20,7 @@ namespace TweetRecommender {
         public static List<Methodology> methodologies;
 
         // Existing experimental result
-        public static Dictionary<long, List<int>> existingResults;
+        public static Dictionary<long, List<int>> existingResults = new Dictionary<long, List<int>>();
 
         public static void Main(string[] args) {
             Console.WriteLine("RWR-based Recommendation (" + DateTime.Now.ToString() + ")\n");
@@ -28,12 +28,12 @@ namespace TweetRecommender {
 
             // Program arguments
             dirData = @args[0] + Path.DirectorySeparatorChar;           // Path of directory that containes SQLite DB files
-            int nFolds = int.Parse(args[1]);                            // Number of folds
-            int nIterations = int.Parse(args[2]);                       // Number of iterations for RWR
+            string[] methodologyList = args[1].Split(',');              // The list of methodologies (csv format; for example: 0,1,8,9,10,11,12 )
+            int nFolds = int.Parse(args[2]);                            // Number of folds
+            int nIterations = int.Parse(args[3]);                       // Number of iterations for RWR
 
             // Load existing experimental results
             if (File.Exists(dirData + "result.dat")) {
-                existingResults = new Dictionary<long, List<int>>();
                 StreamReader reader = new StreamReader(dirData + "result.dat");
                 string line;
                 while ((line = reader.ReadLine()) != null) {
@@ -54,13 +54,8 @@ namespace TweetRecommender {
 
             // Methodology list
             methodologies = new List<Methodology>();
-            methodologies.Add(Methodology.BASELINE);
-            methodologies.Add(Methodology.INCL_FRIENDSHIP);
-            methodologies.Add(Methodology.ALL);
-            methodologies.Add(Methodology.EXCL_FRIENDSHIP);
-            methodologies.Add(Methodology.EXCL_FOLLOWSHIP_ON_THIRDPARTY);
-            methodologies.Add(Methodology.EXCL_AUTHORSHIP);
-            methodologies.Add(Methodology.EXCL_MENTIONCOUNT);
+            foreach (string methodology in methodologyList)
+                methodologies.Add((Methodology) int.Parse(methodology));
 
             foreach (string dbFile in sqliteDBs) {
                 Thread thread = new Thread(new ParameterizedThreadStart(Experiment.runKFoldCrossValidation));

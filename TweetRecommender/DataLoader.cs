@@ -194,6 +194,18 @@ namespace TweetRecommender {
                     features.Add(Feature.FOLLOWSHIP_ON_THIRDPARTY);
                     features.Add(Feature.AUTHORSHIP);
                     break;
+                case Methodology.INCL_FOLLOWSHIP_ON_THIRDPARTY_AND_AUTHORSHIP:      // 13
+                    features.Add(Feature.FOLLOWSHIP_ON_THIRDPARTY);
+                    features.Add(Feature.AUTHORSHIP);
+                    break;
+                case Methodology.INCL_FOLLOWSHIP_ON_THIRDPARTY_AND_MENTIONCOUNT:    // 14
+                    features.Add(Feature.FOLLOWSHIP_ON_THIRDPARTY);
+                    features.Add(Feature.MENTIONCOUNT);
+                    break;
+                case Methodology.INCL_AUTHORSHIP_AND_MENTIONCOUNT:                  // 15
+                    features.Add(Feature.AUTHORSHIP);
+                    features.Add(Feature.MENTIONCOUNT);
+                    break;
             }
 
             // Run graph configuration
