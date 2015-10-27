@@ -46,6 +46,7 @@ namespace TweetRecommender {
                         existingResults.Add(egouser, new List<int>());
                     existingResults[egouser].Add(experiment);
                 }
+                reader.Close();
             }
 
             // Run experiments using multi-threading
