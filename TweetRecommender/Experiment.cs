@@ -80,6 +80,22 @@ namespace TweetRecommender {
                         Dictionary<int, Node> nodes = loader.allNodes;
                         Dictionary<int, List<ForwardLink>> edges = loader.allLinks;
 
+                        // Exeption: for the case that mention count is included when the friendship is none
+                        if (methodology == Methodology.INCL_MENTIONCOUNT || methodology == Methodology.EXCL_MENTIONCOUNT) {
+                            foreach (List<ForwardLink> forwardLinks in edges.Values) {
+                                List<int> indFriendshipLinks = new List<int>();
+                                for (int i = 0; i < forwardLinks.Count; i++) {
+                                    if (forwardLinks[i].type == EdgeType.FRIENDSHIP)
+                                        indFriendshipLinks.Add(i);
+                                }
+                                foreach (int i in indFriendshipLinks) {
+                                    ForwardLink forwardLink = forwardLinks[i];
+                                    if (forwardLink.type == EdgeType.FRIENDSHIP)
+                                        forwardLink.type = EdgeType.UNDEFINED;
+                                }
+                            }
+                        }
+
                         // Make a graph structure to run Random Walk with Restart algorithm
                         Graph graph = new Graph(nodes, edges);
                         graph.buildGraph();

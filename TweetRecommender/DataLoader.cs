@@ -154,6 +154,7 @@ namespace TweetRecommender {
                     features.Add(Feature.AUTHORSHIP);
                     break;
                 case Methodology.INCL_MENTIONCOUNT:                 // 4
+                    features.Add(Feature.FRIENDSHIP);               // temporarily included
                     features.Add(Feature.MENTIONCOUNT);
                     break;
                 case Methodology.INCL_ALLFOLLOWSHIP:                // 5
