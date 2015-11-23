@@ -81,7 +81,9 @@ namespace TweetRecommender {
                         Dictionary<int, List<ForwardLink>> edges = loader.allLinks;
 
                         // Exeption: for the case that mention count is included when the friendship is none
-                        if (methodology == Methodology.INCL_MENTIONCOUNT || methodology == Methodology.EXCL_MENTIONCOUNT) {
+                        if (methodology == Methodology.INCL_MENTIONCOUNT
+                            || methodology == Methodology.EXCL_FRIENDSHIP
+                            || methodology == Methodology.INCL_FOLLOWSHIP_ON_THIRDPARTY_AND_MENTIONCOUNT) {
                             foreach (List<ForwardLink> forwardLinks in edges.Values) {
                                 List<int> indFriendshipLinks = new List<int>();
                                 for (int i = 0; i < forwardLinks.Count; i++) {

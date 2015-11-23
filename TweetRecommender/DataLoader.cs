@@ -176,6 +176,7 @@ namespace TweetRecommender {
                     features.Add(Feature.MENTIONCOUNT);
                     break;
                 case Methodology.EXCL_FRIENDSHIP:                   // 9
+                    features.Add(Feature.FRIENDSHIP);               // temporarily included
                     features.Add(Feature.FOLLOWSHIP_ON_THIRDPARTY);
                     features.Add(Feature.AUTHORSHIP);
                     features.Add(Feature.MENTIONCOUNT);
@@ -200,6 +201,7 @@ namespace TweetRecommender {
                     features.Add(Feature.AUTHORSHIP);
                     break;
                 case Methodology.INCL_FOLLOWSHIP_ON_THIRDPARTY_AND_MENTIONCOUNT:    // 14
+                    features.Add(Feature.FRIENDSHIP);                               // temporarily included
                     features.Add(Feature.FOLLOWSHIP_ON_THIRDPARTY);
                     features.Add(Feature.MENTIONCOUNT);
                     break;
