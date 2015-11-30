@@ -92,8 +92,10 @@ namespace TweetRecommender {
                                 }
                                 foreach (int i in indFriendshipLinks) {
                                     ForwardLink forwardLink = forwardLinks[i];
-                                    if (forwardLink.type == EdgeType.FRIENDSHIP)
+                                    if (forwardLink.type == EdgeType.FRIENDSHIP) {
                                         forwardLink.type = EdgeType.UNDEFINED;
+                                        forwardLinks[i] = forwardLink;
+                                    }
                                 }
                             }
                         }
